@@ -3,7 +3,9 @@ import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadius
 import { 
   LayoutDashboard, Database, Zap, Shield, MessageSquare, User, 
   CheckCircle2, AlertCircle, Sparkles, Bot, FileText, Store, 
-  Server, Activity, Send, Search, Settings, ArrowLeft, BarChart3, RefreshCw
+  Server, Activity, Send, Search, Settings, ArrowLeft, ArrowRight, BarChart3, RefreshCw,
+  Plus, X, Cloud, FileSpreadsheet, Globe, HardDrive, Clock,
+  Wand2, AlertOctagon, GitMerge, Type, ScanSearch
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -15,6 +17,18 @@ const mockIngestionData = [
   { source: "Shopify Store", status: "Active", type: "Webhook", latency: "120ms", records: "850k" },
   { source: "Google Sheets (Legacy)", status: "Warning", type: "Polled", latency: "5s", records: "45k" },
   { source: "PostgreSQL DW", status: "Active", type: "Direct Connect", latency: "12ms", records: "12.5M" },
+];
+
+const mockCleaningLog = [
+  { field: 'phone_num', issue: 'Format Inconsistency', action: 'Normalized to E.164', count: 452 },
+  { field: 'cust_email', issue: 'Duplicate Records', action: 'Merged 12 sets', count: 12 },
+  { field: 'order_val', issue: 'Type Mismatch (String)', action: 'Cast to Float', count: 85 },
+  { field: 'region_code', issue: 'Missing Values', action: 'Imputed Default (US)', count: 23 },
+];
+
+const mockAnomalies = [
+  { id: 1, type: 'Schema Drift', desc: 'New field "loyalty_score" detected in Shopify stream.', severity: 'medium', time: '10m ago' },
+  { id: 2, type: 'Value Outlier', desc: 'Order value $99,999 exceeds 3-sigma threshold.', severity: 'high', time: '1h ago' },
 ];
 
 const mockMetricData = [
@@ -37,6 +51,10 @@ const mockWorkflowSteps = [
 
 const dashboardContext = {
   ingestion: mockIngestionData,
+  cleaning: {
+      log: mockCleaningLog,
+      anomalies: mockAnomalies
+  },
   metrics: mockMetricData,
   workflows: mockWorkflowSteps,
   activeAgents: [
@@ -44,6 +62,24 @@ const dashboardContext = {
       { name: "Invoice Extractor", status: "Idle", lastActive: "15m ago" }
   ],
   systemHealth: { uptime: "99.99%", latency: "42ms", errors: "0.02%" }
+};
+
+const integrationOptions = {
+  saas: [
+    { id: 'hubspot', name: 'HubSpot', icon: Database, desc: 'CRM & Marketing' },
+    { id: 'salesforce', name: 'Salesforce', icon: Cloud, desc: 'Enterprise CRM' },
+    { id: 'notion', name: 'Notion', icon: FileText, desc: 'Knowledge Base' },
+    { id: 'airtable', name: 'Airtable', icon: Database, desc: 'Low-code DB' },
+  ],
+  db: [
+    { id: 'postgres', name: 'PostgreSQL', icon: Database, desc: 'Relational DB' },
+    { id: 'mysql', name: 'MySQL', icon: Database, desc: 'Relational DB' },
+    { id: 'mongo', name: 'MongoDB', icon: Server, desc: 'NoSQL Document DB' },
+  ],
+  other: [
+    { id: 'rest', name: 'REST API', icon: Globe, desc: 'Custom Endpoints' },
+    { id: 'csv', name: 'CSV / Excel', icon: FileSpreadsheet, desc: 'File Upload' },
+  ]
 };
 
 // --- Sub-Components ---
@@ -105,6 +141,12 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
   
+  // Integration Modal State
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectStep, setConnectStep] = useState(1);
+  const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
+  const [syncMode, setSyncMode] = useState<'webhook' | 'schedule'>('webhook');
+
   // Chat State
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState<{role: 'user' | 'ai', text: string}[]>([
@@ -131,6 +173,17 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
       setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
+  const handleOpenConnect = () => {
+    setConnectStep(1);
+    setSelectedIntegration(null);
+    setShowConnectModal(true);
+  };
+
+  const handleSelectIntegration = (integration: any) => {
+    setSelectedIntegration(integration);
+    setConnectStep(2);
+  };
+
   const getRadarData = () => [
     { subject: 'Centralization', A: data.answers['q1'] || 20, fullMark: 100 },
     { subject: 'Reporting', A: data.answers['q2'] || 20, fullMark: 100 },
@@ -147,6 +200,176 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
       }
       return part;
     });
+  };
+
+  const renderConnectModal = () => {
+    if (!showConnectModal) return null;
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowConnectModal(false)}></div>
+        <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-fade-in-up">
+          
+          {/* Header */}
+          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/50">
+             <div>
+               <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                 {connectStep === 1 ? 'Connect Data Source' : `Configure ${selectedIntegration?.name}`}
+               </h3>
+               <p className="text-sm text-slate-500 dark:text-slate-400">
+                 {connectStep === 1 ? 'Select a platform to ingest data from.' : 'Set up your synchronization pipeline.'}
+               </p>
+             </div>
+             <button onClick={() => setShowConnectModal(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors">
+               <X size={20} />
+             </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6 max-h-[60vh] overflow-y-auto no-scrollbar">
+            {connectStep === 1 ? (
+              <div className="space-y-8">
+                {/* SaaS Section */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <Cloud size={14} /> SaaS Platforms
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {integrationOptions.saas.map((item) => (
+                      <button key={item.id} onClick={() => handleSelectIntegration(item)} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-datova-500 dark:hover:border-datova-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
+                        <item.icon className="text-slate-400 group-hover:text-datova-500 mb-3" size={24} />
+                        <div className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</div>
+                        <div className="text-[10px] text-slate-500">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* DB Section */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <HardDrive size={14} /> Databases
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {integrationOptions.db.map((item) => (
+                      <button key={item.id} onClick={() => handleSelectIntegration(item)} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-datova-500 dark:hover:border-datova-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
+                        <item.icon className="text-slate-400 group-hover:text-datova-500 mb-3" size={24} />
+                        <div className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</div>
+                        <div className="text-[10px] text-slate-500">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Files & API Section */}
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                    <Globe size={14} /> Files & Custom API
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {integrationOptions.other.map((item) => (
+                      <button key={item.id} onClick={() => handleSelectIntegration(item)} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-datova-500 dark:hover:border-datova-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
+                        <item.icon className="text-slate-400 group-hover:text-datova-500 mb-3" size={24} />
+                        <div className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</div>
+                        <div className="text-[10px] text-slate-500">{item.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Configuration Step */}
+                <div className="bg-slate-50 dark:bg-slate-850 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
+                   <h4 className="font-bold text-slate-900 dark:text-white mb-4">Pipeline Settings</h4>
+                   
+                   <div className="grid md:grid-cols-2 gap-4">
+                      {/* Sync Mode Selection */}
+                      <button 
+                        onClick={() => setSyncMode('webhook')}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${syncMode === 'webhook' ? 'border-datova-500 bg-datova-50 dark:bg-datova-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}
+                      >
+                         <div className="flex items-center gap-2 mb-2">
+                            <Zap size={18} className={syncMode === 'webhook' ? 'text-datova-500' : 'text-slate-400'} />
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">Real-time Webhook</span>
+                         </div>
+                         <p className="text-xs text-slate-500">
+                           Instant data ingestion triggered by events. Best for CRMs and Transactional data.
+                         </p>
+                      </button>
+
+                      <button 
+                        onClick={() => setSyncMode('schedule')}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${syncMode === 'schedule' ? 'border-datova-500 bg-datova-50 dark:bg-datova-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}
+                      >
+                         <div className="flex items-center gap-2 mb-2">
+                            <Clock size={18} className={syncMode === 'schedule' ? 'text-datova-500' : 'text-slate-400'} />
+                            <span className="font-bold text-sm text-slate-900 dark:text-white">Scheduled Sync</span>
+                         </div>
+                         <p className="text-xs text-slate-500">
+                           Batch processing at set intervals (e.g. hourly). Best for Reporting and Large datasets.
+                         </p>
+                      </button>
+                   </div>
+
+                   {/* Conditional Fields based on Source */}
+                   <div className="mt-6 space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Connection Name</label>
+                        <input type="text" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white" defaultValue={`${selectedIntegration?.name} Prod`} />
+                      </div>
+                      
+                      {syncMode === 'schedule' && (
+                        <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sync Frequency</label>
+                          <select className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white">
+                             <option>Every 15 minutes</option>
+                             <option>Hourly</option>
+                             <option>Daily (Midnight UTC)</option>
+                             <option>Weekly</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {selectedIntegration?.id === 'csv' ? (
+                         <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 text-center bg-slate-50 dark:bg-slate-900">
+                            <FileSpreadsheet className="mx-auto text-slate-400 mb-2" size={32} />
+                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Drag and drop CSV/Excel here</p>
+                            <p className="text-xs text-slate-400 mt-1">or click to browse</p>
+                         </div>
+                      ) : (
+                         <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">API Key / Connection String</label>
+                            <input type="password" placeholder="••••••••••••••••" className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white" />
+                         </div>
+                      )}
+                   </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex justify-between">
+             {connectStep === 2 ? (
+                <button onClick={() => setConnectStep(1)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
+                   Back
+                </button>
+             ) : (
+                <div></div>
+             )}
+             
+             {connectStep === 2 ? (
+               <button onClick={() => setShowConnectModal(false)} className="px-8 py-3 bg-datova-500 hover:bg-datova-600 text-white rounded-xl font-bold shadow-lg shadow-datova-500/20 transition-all">
+                  Create Pipeline
+               </button>
+             ) : (
+               <button disabled className="px-6 py-3 text-slate-300 dark:text-slate-700 font-bold text-sm italic cursor-not-allowed">Select a source to continue</button>
+             )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderOverviewTab = () => (
@@ -221,25 +444,38 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
 
   const renderFoundationTab = () => (
     <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-y-auto no-scrollbar">
-      <FeatureCard title="Data Ingestion Status" className="col-span-1 md:col-span-2">
-        <div className="overflow-x-auto">
+      <FeatureCard title="Data Ingestion & Pipelines" className="col-span-1 md:col-span-2">
+        <div className="overflow-x-auto mb-4">
           <table className="w-full text-left text-sm">
             <thead>
               <tr className="text-slate-400 border-b border-slate-200 dark:border-slate-800">
                 <th className="pb-3 font-medium">Source</th>
-                <th className="pb-3 font-medium">Connection</th>
-                <th className="pb-3 font-medium">Latency</th>
-                <th className="pb-3 font-medium">Records Synced</th>
+                <th className="pb-3 font-medium">Connection Type</th>
+                <th className="pb-3 font-medium">Sync Method</th>
+                <th className="pb-3 font-medium">Records</th>
                 <th className="pb-3 font-medium">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {mockIngestionData.map((row, i) => (
                 <tr key={i} className="group hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="py-3 font-medium text-slate-900 dark:text-white">{row.source}</td>
+                  <td className="py-3 font-medium text-slate-900 dark:text-white flex items-center gap-2">
+                     <div className="p-1 rounded bg-slate-100 dark:bg-slate-800">
+                        {row.source.includes('Salesforce') ? <Cloud size={14}/> : 
+                         row.source.includes('Shopify') ? <Store size={14}/> :
+                         row.source.includes('Google Sheets') ? <FileSpreadsheet size={14}/> : <Database size={14}/>}
+                     </div>
+                     {row.source}
+                  </td>
                   <td className="py-3 text-slate-500">{row.type}</td>
-                  <td className="py-3 text-slate-500 font-mono text-xs">{row.latency}</td>
-                  <td className="py-3 text-slate-500">{row.records}</td>
+                  <td className="py-3 text-slate-500 text-xs">
+                     {row.type.includes('Webhook') ? (
+                        <span className="flex items-center gap-1 text-purple-500 font-medium"><Zap size={12}/> Real-time</span>
+                     ) : (
+                        <span className="flex items-center gap-1 text-slate-400"><Clock size={12}/> Scheduled</span>
+                     )}
+                  </td>
+                  <td className="py-3 text-slate-500 font-mono text-xs">{row.records}</td>
                   <td className="py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                       row.status === 'Active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 
@@ -254,11 +490,116 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
             </tbody>
           </table>
         </div>
-        <div className="flex gap-4 mt-4">
-             <button className="text-sm text-datova-500 font-medium flex items-center gap-1 hover:gap-2 transition-all">+ Add Connector</button>
-             <button className="text-sm text-slate-400 font-medium flex items-center gap-1 hover:text-slate-600 transition-all">Import CSV/Excel</button>
+        <div className="flex gap-4">
+             <button 
+                onClick={handleOpenConnect}
+                className="text-sm bg-datova-500 text-white hover:bg-datova-600 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md shadow-datova-500/20"
+             >
+                <Plus size={16} /> Connect Data Source
+             </button>
+             <button 
+                onClick={handleOpenConnect}
+                className="text-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all"
+             >
+                <FileSpreadsheet size={16} /> Import CSV
+             </button>
         </div>
       </FeatureCard>
+
+      {/* NEW MODULE: Data Cleaning & Standardization */}
+      <FeatureCard title="Data Cleaning & Standardization Studio" className="col-span-1 md:col-span-2">
+           <div className="grid lg:grid-cols-3 gap-6">
+               
+               {/* Column 1: Pipeline Status & Controls */}
+               <div className="lg:col-span-1 space-y-4">
+                  <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl">
+                      <h5 className="font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                         <Wand2 size={16} className="text-datova-500" /> Auto-Normalization
+                      </h5>
+                      <div className="space-y-3">
+                         <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600 dark:text-slate-300">Naming Convention</span>
+                            <span className="font-mono text-xs bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">snake_case</span>
+                         </div>
+                         <div className="flex items-center justify-between text-sm">
+                            <span className="text-slate-600 dark:text-slate-300">Date Format</span>
+                            <span className="font-mono text-xs bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">ISO-8601</span>
+                         </div>
+                         <div className="flex items-center justify-between text-sm">
+                             <span className="text-slate-600 dark:text-slate-300">Deduplication</span>
+                             <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                </span>
+                                Active
+                             </div>
+                         </div>
+                      </div>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl">
+                      <h5 className="font-bold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-2 text-sm">
+                          <AlertOctagon size={16} /> Incoming Anomalies
+                      </h5>
+                      <div className="space-y-2">
+                          {mockAnomalies.map(a => (
+                              <div key={a.id} className="text-xs p-2 bg-white dark:bg-slate-900 rounded border border-amber-100 dark:border-amber-900/50 shadow-sm">
+                                  <div className="flex justify-between mb-1">
+                                      <span className="font-bold text-slate-700 dark:text-slate-300">{a.type}</span>
+                                      <span className="text-slate-400">{a.time}</span>
+                                  </div>
+                                  <p className="text-slate-600 dark:text-slate-400 leading-tight">{a.desc}</p>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+               </div>
+
+               {/* Column 2 & 3: Real-time Activity Log */}
+               <div className="lg:col-span-2">
+                  <div className="flex items-center justify-between mb-4">
+                      <h5 className="font-bold text-slate-900 dark:text-white text-sm">Live Transformation Log</h5>
+                      <div className="flex gap-2 text-xs">
+                          <span className="px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold">Processed: 1.2M</span>
+                          <span className="px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold">Cleaned: 98%</span>
+                      </div>
+                  </div>
+                  <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
+                      <table className="w-full text-sm text-left">
+                          <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-medium border-b border-slate-200 dark:border-slate-800">
+                              <tr>
+                                  <th className="px-4 py-3">Field Detected</th>
+                                  <th className="px-4 py-3">Issue Type</th>
+                                  <th className="px-4 py-3">Automated Action</th>
+                                  <th className="px-4 py-3 text-right">Count</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                              {mockCleaningLog.map((log, i) => (
+                                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                      <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{log.field}</td>
+                                      <td className="px-4 py-3">
+                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                              log.issue.includes('Missing') ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
+                                              log.issue.includes('Type') ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                              'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                          }`}>
+                                              {log.issue}
+                                          </span>
+                                      </td>
+                                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                                          <ArrowRight size={12} className="text-slate-400" /> {log.action}
+                                      </td>
+                                      <td className="px-4 py-3 text-right font-mono text-slate-500">{log.count}</td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+               </div>
+           </div>
+       </FeatureCard>
 
       <FeatureCard title="Data Quality Score">
         <div className="flex items-center gap-6">
@@ -673,6 +1014,8 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                    activeTab === 'automation' ? renderAutomationTab() :
                    activeTab === 'reliability' ? renderReliabilityTab() : renderAIConsoleTab()}
                 </div>
+
+                {renderConnectModal()}
             </div>
         </div>
     </div>
