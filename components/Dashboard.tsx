@@ -10,7 +10,8 @@ import {
   Brain, Sliders, ShieldCheck, TrendingUp, TrendingDown, Code2, Terminal, Siren, Construction, Lock,
   MousePointer2, Trash2, Move, Save, CornerDownRight, GitBranch, AlertTriangle, Plug, Scale, BookOpen, Eye, FileCheck,
   Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash, ShieldAlert, GitPullRequest, PauseCircle, PlayCircle, RefreshCcw,
-  ArrowDown, GitCommit, Calendar, Thermometer, StopCircle, DollarSign, Gauge, UserCheck, FileJson
+  ArrowDown, GitCommit, Calendar, Thermometer, StopCircle, DollarSign, Gauge, UserCheck, FileJson, FileBadge, Scale3D, ShieldQuestion,
+  Loader2, Check, Coins, Calculator, Receipt, PieChart as PieChartIcon
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -81,24 +82,29 @@ const mockLatencyData = [
     { time: '23:59', latency: 40 },
 ];
 
-const mockReliabilityEvents = [
-    { id: 1, title: 'Auto-Scaling Triggered', desc: 'Throughput spike detected. Scaled Agent pods to 5.', type: 'info', time: '15m ago' },
-    { id: 2, title: 'Schema Drift Remediation', desc: 'Shopify webhook schema changed. Field "tax_id" auto-mapped to "tax_code".', type: 'success', time: '2h ago' },
-    { id: 3, title: 'API Rate Limit Warning', desc: 'Approaching Salesforce API daily limit (85%).', type: 'warning', time: '5h ago' }
-];
-
-const mockGovernanceRisks = [
-  { name: 'Unacceptable Risk', value: 0, color: '#ef4444' },
-  { name: 'High Risk', value: 2, color: '#f97316' },
-  { name: 'Limited Risk', value: 5, color: '#eab308' },
-  { name: 'Minimal Risk', value: 12, color: '#22c55e' },
-];
+const mockGovernanceStats = {
+    riskLevel: 'High-Risk',
+    riskScore: 85,
+    frameworks: [
+        { name: 'EU AI Act', status: 'Compliant', progress: 100, color: 'bg-emerald-500' },
+        { name: 'ISO 42001', status: 'In Progress', progress: 75, color: 'bg-blue-500' },
+        { name: 'GDPR', status: 'Compliant', progress: 98, color: 'bg-indigo-500' },
+    ],
+    postMarket: [
+        { date: 'Oct 01', incidents: 0, interventions: 12 },
+        { date: 'Oct 05', incidents: 1, interventions: 15 },
+        { date: 'Oct 10', incidents: 0, interventions: 8 },
+        { date: 'Oct 15', incidents: 0, interventions: 22 }, // Spike
+        { date: 'Oct 20', incidents: 2, interventions: 18 },
+        { date: 'Oct 25', incidents: 0, interventions: 10 },
+    ]
+};
 
 const mockComplianceDocs = [
-  { id: '1', name: 'Technical Documentation (Annex IV)', status: 'Ready', type: 'PDF', date: 'Oct 24, 2023' },
-  { id: '2', name: 'Conformity Assessment', status: 'Review', type: 'DOCX', date: 'Oct 23, 2023' },
-  { id: '3', name: 'EU Database Registration', status: 'Pending', type: 'Form', date: '-' },
-  { id: '4', name: 'Bias Audit Report', status: 'Ready', type: 'PDF', date: 'Oct 22, 2023' },
+  { id: '1', name: 'Technical Documentation (Annex IV)', status: 'Ready', type: 'PDF', date: 'Oct 24, 2023', size: '2.4 MB' },
+  { id: '2', name: 'Conformity Assessment', status: 'Review', type: 'DOCX', date: 'Oct 23, 2023', size: '0.8 MB' },
+  { id: '3', name: 'EU Database Registration', status: 'Pending', type: 'Form', date: '-', size: 'XML' },
+  { id: '4', name: 'Bias Audit Report', status: 'Ready', type: 'PDF', date: 'Oct 22, 2023', size: '1.2 MB' },
 ];
 
 const mockKPIHierarchy = [
@@ -138,6 +144,28 @@ const mockSeasonalityData = [
   { month: 'May', current: 5300, lastYear: 4300, seasonality: 'Medium' },
   { month: 'Jun', current: 6100, lastYear: 4800, seasonality: 'High' },
 ];
+
+// ROI Data
+const mockRoiData = {
+    cumulative: [
+        { month: 'Jan', manualCost: 50000, automationCost: 5000, savings: 0 },
+        { month: 'Feb', manualCost: 102000, automationCost: 12000, savings: 40000 },
+        { month: 'Mar', manualCost: 155000, automationCost: 18000, savings: 87000 },
+        { month: 'Apr', manualCost: 210000, automationCost: 24000, savings: 136000 },
+        { month: 'May', manualCost: 265000, automationCost: 30000, savings: 185000 },
+        { month: 'Jun', manualCost: 320000, automationCost: 36000, savings: 234000 },
+    ],
+    agentBreakdown: [
+        { name: "Support Triage Agent", manualCostPerTask: 12.50, aiCostPerTask: 0.45, volume: 4500, savings: 54225, errorReduction: '95%' },
+        { name: "Invoice Processor", manualCostPerTask: 8.00, aiCostPerTask: 0.12, volume: 1200, savings: 9456, errorReduction: '99%' },
+        { name: "Lead Enricher", manualCostPerTask: 3.50, aiCostPerTask: 0.05, volume: 8000, savings: 27600, errorReduction: '80%' },
+    ],
+    summary: {
+        totalSaved: 142500,
+        hoursSaved: 2450,
+        roiMultiplier: 12.4
+    }
+};
 
 // Enhanced UBDM Data
 const mockUBDMEntities = [
@@ -300,7 +328,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
-  const [activeTab, setActiveTab] = useState<DashboardTab | 'governance'>('overview');
+  const [activeTab, setActiveTab] = useState<DashboardTab | 'governance' | 'value'>('overview');
   
   // Data State
   const [ingestionData, setIngestionData] = useState(mockIngestionData);
@@ -349,6 +377,12 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
   // Compliance Generator State
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [complianceStep, setComplianceStep] = useState(1);
+
+  // Forecasting State
+  const [forecastInput, setForecastInput] = useState({
+      volume: 1000,
+      complexity: 'Medium'
+  });
 
   // Intelligence Tab State
   const [showForecast, setShowForecast] = useState(false);
@@ -859,7 +893,165 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
     );
   };
 
+  const renderValueTab = () => (
+      <div className="animate-fade-in space-y-6 h-full pb-6">
+        {/* Top KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 rounded-[1.5rem] flex flex-col justify-center">
+                <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold mb-1">
+                    <DollarSign size={18} /> Total Saved
+                </div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white">${mockRoiData.summary.totalSaved.toLocaleString()}</div>
+                <div className="text-xs text-slate-500">YTD (Year to Date)</div>
+            </div>
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-[1.5rem] flex flex-col justify-center">
+                <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold mb-1">
+                    <Clock size={18} /> Time Saved
+                </div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white">{mockRoiData.summary.hoursSaved.toLocaleString()}h</div>
+                <div className="text-xs text-slate-500">Man-hours redirected</div>
+            </div>
+            <div className="p-4 bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800 rounded-[1.5rem] flex flex-col justify-center">
+                <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 font-bold mb-1">
+                    <TrendingUp size={18} /> ROI Multiplier
+                </div>
+                <div className="text-3xl font-bold text-slate-900 dark:text-white">{mockRoiData.summary.roiMultiplier}x</div>
+                <div className="text-xs text-slate-500">Return on Tech Spend</div>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-[1.5rem] flex flex-col justify-center items-center text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <FileText size={24} className="text-slate-400 mb-2" />
+                <div className="font-bold text-slate-900 dark:text-white text-sm">Generate CFO Report</div>
+                <div className="text-[10px] text-slate-500">Download PDF Executive Summary</div>
+            </div>
+        </div>
+
+        {/* Cost Analysis Chart */}
+        <FeatureCard title="Cost Comparison: Manual vs. Automated">
+            <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={mockRoiData.cumulative}>
+                    <defs>
+                        <linearGradient id="colorManual" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#94a3b8" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorAuto" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val/1000}k`} />
+                    <Tooltip 
+                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value) => [`$${value.toLocaleString()}`, "Cost"]}
+                    />
+                    <Legend verticalAlign="top" iconType="circle" wrapperStyle={{ fontSize: '12px', paddingBottom: '20px' }} />
+                    <Area type="monotone" dataKey="manualCost" name="Projected Manual Cost" stroke="#94a3b8" strokeDasharray="5 5" fillOpacity={1} fill="url(#colorManual)" strokeWidth={2} />
+                    <Area type="monotone" dataKey="automationCost" name="Actual Automation Cost" stroke="#10b981" fillOpacity={1} fill="url(#colorAuto)" strokeWidth={3} />
+                </AreaChart>
+            </ResponsiveContainer>
+        </FeatureCard>
+
+        {/* Agent Breakdown & Simulator */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Agent ROI Table */}
+            <FeatureCard title="ROI by Agent">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-900 text-xs text-slate-500 uppercase">
+                            <tr>
+                                <th className="px-4 py-3 rounded-l-lg">Agent</th>
+                                <th className="px-4 py-3 text-right">Vol/Mo</th>
+                                <th className="px-4 py-3 text-right">Manual Cost</th>
+                                <th className="px-4 py-3 text-right">AI Cost</th>
+                                <th className="px-4 py-3 rounded-r-lg text-right">Net Savings</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {mockRoiData.agentBreakdown.map((agent, i) => (
+                                <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                    <td className="px-4 py-3 font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                                        <Bot size={14} className="text-datova-500" /> {agent.name}
+                                    </td>
+                                    <td className="px-4 py-3 text-right font-mono text-slate-500">{agent.volume.toLocaleString()}</td>
+                                    <td className="px-4 py-3 text-right text-slate-500">${agent.manualCostPerTask}</td>
+                                    <td className="px-4 py-3 text-right text-slate-500">${agent.aiCostPerTask}</td>
+                                    <td className="px-4 py-3 text-right font-bold text-emerald-600 dark:text-emerald-400">
+                                        +${agent.savings.toLocaleString()}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </FeatureCard>
+
+            {/* Forecasting Simulator */}
+            <FeatureCard title="Opportunity Simulator" className="bg-indigo-50 dark:bg-slate-900 border-indigo-100 dark:border-slate-800">
+                <div className="flex flex-col h-full justify-between">
+                    <div className="space-y-6">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Estimate savings for a new process automation.</p>
+                        
+                        <div>
+                            <div className="flex justify-between mb-2 text-sm font-bold text-slate-700 dark:text-slate-300">
+                                <label>Monthly Volume</label>
+                                <span className="text-datova-600">{forecastInput.volume.toLocaleString()} tasks</span>
+                            </div>
+                            <input 
+                                type="range" 
+                                min="100" max="10000" step="100"
+                                value={forecastInput.volume}
+                                onChange={(e) => setForecastInput({...forecastInput, volume: parseInt(e.target.value)})}
+                                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-datova-500"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">Process Complexity</label>
+                            <div className="flex gap-2">
+                                {['Low', 'Medium', 'High'].map(level => (
+                                    <button 
+                                        key={level}
+                                        onClick={() => setForecastInput({...forecastInput, complexity: level})}
+                                        className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-all ${
+                                            forecastInput.complexity === level 
+                                            ? 'bg-indigo-500 text-white border-indigo-500 shadow-md' 
+                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
+                                        }`}
+                                    >
+                                        {level}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 pt-6 border-t border-slate-200 dark:border-slate-800">
+                        <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-medium text-slate-500">Projected Monthly Savings</span>
+                            <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+                                ${ (forecastInput.volume * (forecastInput.complexity === 'Low' ? 5 : forecastInput.complexity === 'Medium' ? 12 : 25) * 0.8).toLocaleString() }
+                            </span>
+                        </div>
+                        <div className="text-right text-[10px] text-slate-400">
+                            Based on avg manual cost vs. token usage
+                        </div>
+                        <button className="w-full mt-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2">
+                            <Calculator size={16} /> Add to Roadmap
+                        </button>
+                    </div>
+                </div>
+            </FeatureCard>
+        </div>
+      </div>
+  );
+
+  // ... (Other render functions) ...
+
   const renderComplianceModal = () => {
+    // ... (Existing Implementation) ...
     if (!showComplianceModal) return null;
 
     return (
@@ -1070,1455 +1262,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
     );
   };
 
-  const renderConnectModal = () => {
-    if (!showConnectModal) return null;
-
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowConnectModal(false)}></div>
-        <div className="relative bg-white dark:bg-slate-900 rounded-[2rem] shadow-2xl w-full max-w-3xl overflow-hidden border border-slate-200 dark:border-slate-800 animate-fade-in-up">
-          
-          {/* Header */}
-          <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-950/50">
-             <div>
-               <h3 className="text-xl font-bold text-slate-900 dark:text-white">
-                 {connectStep === 1 ? 'Connect Data Source' : `Configure ${selectedIntegration?.name}`}
-               </h3>
-               <p className="text-sm text-slate-500 dark:text-slate-400">
-                 {connectStep === 1 ? 'Select a platform to ingest data from.' : 'Set up your synchronization pipeline.'}
-               </p>
-             </div>
-             <button onClick={() => setShowConnectModal(false)} className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors">
-               <X size={20} />
-             </button>
-          </div>
-
-          {/* Body */}
-          <div className="p-6 max-h-[60vh] overflow-y-auto no-scrollbar">
-            {connectStep === 1 ? (
-              <div className="space-y-8">
-                {/* SaaS Section */}
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                    <Cloud size={14} /> SaaS Platforms
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {integrationOptions.saas.map((item) => (
-                      <button key={item.id} onClick={() => handleSelectIntegration(item)} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-datova-500 dark:hover:border-datova-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
-                        <item.icon className="text-slate-400 group-hover:text-datova-500 mb-3" size={24} />
-                        <div className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</div>
-                        <div className="text-[10px] text-slate-500">{item.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* DB Section */}
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                    <HardDrive size={14} /> Databases
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {integrationOptions.db.map((item) => (
-                      <button key={item.id} onClick={() => handleSelectIntegration(item)} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-datova-500 dark:hover:border-datova-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
-                        <item.icon className="text-slate-400 group-hover:text-datova-500 mb-3" size={24} />
-                        <div className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</div>
-                        <div className="text-[10px] text-slate-500">{item.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Files & API Section */}
-                <div>
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                    <Globe size={14} /> Files & Custom API
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {integrationOptions.other.map((item) => (
-                      <button key={item.id} onClick={() => handleSelectIntegration(item)} className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-datova-500 dark:hover:border-datova-500 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all text-left group">
-                        <item.icon className="text-slate-400 group-hover:text-datova-500 mb-3" size={24} />
-                        <div className="font-bold text-slate-900 dark:text-white text-sm">{item.name}</div>
-                        <div className="text-[10px] text-slate-500">{item.desc}</div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Configuration Step */}
-                <div className="bg-slate-50 dark:bg-slate-850 p-6 rounded-2xl border border-slate-200 dark:border-slate-800">
-                   <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-slate-900 dark:text-white">Pipeline Settings</h4>
-                        <div className="flex items-center gap-2 text-xs text-datova-600 bg-datova-100 dark:bg-datova-900/30 px-2 py-1 rounded-lg">
-                            <Plug size={12} /> API Integration
-                        </div>
-                   </div>
-                   
-                   <div className="grid md:grid-cols-2 gap-4">
-                      {/* Sync Mode Selection */}
-                      <button 
-                        onClick={() => setSyncMode('webhook')}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${syncMode === 'webhook' ? 'border-datova-500 bg-datova-50 dark:bg-datova-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}
-                      >
-                         <div className="flex items-center gap-2 mb-2">
-                            <Zap size={18} className={syncMode === 'webhook' ? 'text-datova-500' : 'text-slate-400'} />
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">Real-time Webhook</span>
-                         </div>
-                         <p className="text-xs text-slate-500">
-                           Instant data ingestion triggered by events. Best for CRMs and Transactional data.
-                         </p>
-                      </button>
-
-                      <button 
-                        onClick={() => setSyncMode('schedule')}
-                        className={`p-4 rounded-xl border-2 text-left transition-all ${syncMode === 'schedule' ? 'border-datova-500 bg-datova-50 dark:bg-datova-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}
-                      >
-                         <div className="flex items-center gap-2 mb-2">
-                            <Clock size={18} className={syncMode === 'schedule' ? 'text-datova-500' : 'text-slate-400'} />
-                            <span className="font-bold text-sm text-slate-900 dark:text-white">Scheduled Sync</span>
-                         </div>
-                         <p className="text-xs text-slate-500">
-                           Batch processing (API polling) at set intervals. Best for Reporting and Large datasets.
-                         </p>
-                      </button>
-                   </div>
-
-                   {/* Conditional Fields based on Source */}
-                   <div className="mt-6 space-y-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Connection Name</label>
-                        <input 
-                            type="text" 
-                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white" 
-                            value={configForm.name}
-                            onChange={(e) => setConfigForm({...configForm, name: e.target.value})}
-                        />
-                      </div>
-                      
-                      {selectedIntegration?.id === 'hubspot' || selectedIntegration?.id === 'salesforce' ? (
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                {selectedIntegration.id === 'hubspot' ? 'Private App Access Token' : 'OAuth Client ID'}
-                            </label>
-                            <input 
-                                type="password" 
-                                placeholder="••••••••••••••••" 
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white" 
-                                value={configForm.apiKey}
-                                onChange={(e) => setConfigForm({...configForm, apiKey: e.target.value})}
-                            />
-                            <p className="text-[10px] text-slate-400 mt-1">
-                                {selectedIntegration.id === 'hubspot' ? 'Found in HubSpot Settings > Integrations > Private Apps.' : 'Found in Salesforce Setup > App Manager.'}
-                            </p>
-                          </div>
-                      ) : selectedIntegration?.id === 'notion' || selectedIntegration?.id === 'airtable' ? (
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Integration Token</label>
-                            <input 
-                                type="password" 
-                                placeholder="secret_..." 
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white"
-                                value={configForm.apiKey}
-                                onChange={(e) => setConfigForm({...configForm, apiKey: e.target.value})} 
-                            />
-                          </div>
-                      ) : selectedIntegration?.id === 'csv' ? (
-                         <div className="border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-8 text-center bg-slate-50 dark:bg-slate-900">
-                            <FileSpreadsheet className="mx-auto text-slate-400 mb-2" size={32} />
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Drag and drop CSV/Excel here</p>
-                            <p className="text-xs text-slate-400 mt-1">or click to browse</p>
-                         </div>
-                      ) : (
-                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">API Key / Connection String</label>
-                            <input 
-                                type="password" 
-                                placeholder="••••••••••••••••" 
-                                className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white"
-                                value={configForm.apiKey}
-                                onChange={(e) => setConfigForm({...configForm, apiKey: e.target.value})}
-                            />
-                         </div>
-                      )}
-
-                      {selectedIntegration?.id !== 'csv' && (
-                          <div className="flex justify-end mt-2">
-                              <button 
-                                onClick={handleTestConnection}
-                                disabled={isTestingConnection}
-                                className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center gap-1 transition-colors disabled:opacity-50"
-                              >
-                                  {isTestingConnection ? <RefreshCw size={12} className="animate-spin"/> : <CheckCircle2 size={12} />}
-                                  {isTestingConnection ? 'Verifying...' : 'Test Connection'}
-                              </button>
-                          </div>
-                      )}
-                   </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex justify-between">
-             {connectStep === 2 ? (
-                <button onClick={() => setConnectStep(1)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors">
-                   Back
-                </button>
-             ) : (
-                <div></div>
-             )}
-             
-             {connectStep === 2 ? (
-               <button onClick={handleCreatePipeline} className="px-8 py-3 bg-datova-500 hover:bg-datova-600 text-white rounded-xl font-bold shadow-lg shadow-datova-500/20 transition-all">
-                  Create Pipeline
-               </button>
-             ) : (
-               <button disabled className="px-6 py-3 text-slate-300 dark:text-slate-700 font-bold text-sm italic cursor-not-allowed">Select a source to continue</button>
-             )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderFoundationTab = () => (
-    // ... (Existing implementation remains the same) ...
-    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-y-auto no-scrollbar pb-10">
-      <FeatureCard title="Data Ingestion & Pipelines" className="col-span-1 md:col-span-2">
-        <div className="overflow-x-auto mb-4">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                <th className="pb-3 font-medium">Source</th>
-                <th className="pb-3 font-medium">Connection Type</th>
-                <th className="pb-3 font-medium">Sync Method</th>
-                <th className="pb-3 font-medium">Records</th>
-                <th className="pb-3 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {ingestionData.map((row, i) => (
-                <tr key={i} className="group hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
-                  <td className="py-3 font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                     <div className="p-1 rounded bg-slate-100 dark:bg-slate-800">
-                        {row.source.includes('Salesforce') ? <Cloud size={14}/> : 
-                         row.source.includes('Shopify') ? <Store size={14}/> :
-                         row.source.includes('HubSpot') ? <Database size={14}/> :
-                         row.source.includes('Notion') ? <FileText size={14}/> :
-                         row.source.includes('Google Sheets') ? <FileSpreadsheet size={14}/> : <Database size={14}/>}
-                     </div>
-                     {row.source}
-                  </td>
-                  <td className="py-3 text-slate-500">{row.type}</td>
-                  <td className="py-3 text-slate-500 text-xs">
-                     {row.type.includes('Webhook') ? (
-                        <span className="flex items-center gap-1 text-purple-500 font-medium"><Zap size={12}/> Real-time</span>
-                     ) : (
-                        <span className="flex items-center gap-1 text-slate-400"><Clock size={12}/> Scheduled</span>
-                     )}
-                  </td>
-                  <td className="py-3 text-slate-500 font-mono text-xs">{row.records}</td>
-                  <td className="py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      row.status === 'Active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 
-                      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    }`}>
-                      {row.status === 'Active' ? <CheckCircle2 size={12} className="mr-1"/> : <AlertCircle size={12} className="mr-1"/>}
-                      {row.status}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="flex gap-4">
-             <button 
-                onClick={handleOpenConnect}
-                className="text-sm bg-datova-500 text-white hover:bg-datova-600 px-4 py-2 rounded-lg font-bold flex items-center gap-2 transition-all shadow-md shadow-datova-500/20"
-             >
-                <Plus size={16} /> Connect Data Source
-             </button>
-             <button 
-                onClick={handleOpenConnect}
-                className="text-sm border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-all"
-             >
-                <FileSpreadsheet size={16} /> Import CSV
-             </button>
-        </div>
-      </FeatureCard>
-
-      {/* Unified Business Data Model (UBDM) Studio */}
-      <FeatureCard title="Unified Business Data Model (UBDM) Studio" className="col-span-1 md:col-span-2" action={
-       <div className="flex gap-2">
-          <button onClick={() => setUbdmViewMode('schema')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'schema' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Schema View"><Layers size={16}/></button>
-          <button onClick={() => setUbdmViewMode('lineage')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'lineage' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Lineage View"><Workflow size={16}/></button>
-          <button onClick={() => setUbdmViewMode('identity')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'identity' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Identity Resolution"><Fingerprint size={16}/></button>
-       </div>
-      }>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col md:flex-row h-[600px]">
-            {/* Sidebar List */}
-            <div className="w-full md:w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex flex-col shrink-0">
-                <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                    <h5 className="text-xs font-bold uppercase text-slate-400 mb-2">Canonical Entities</h5>
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <input 
-                            type="text" 
-                            placeholder="Search entities..." 
-                            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white"
-                        />
-                    </div>
-                </div>
-                <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {mockUBDMEntities.map((entity) => (
-                        <button
-                            key={entity.id}
-                            onClick={() => setSelectedEntityId(entity.id)}
-                            className={`w-full flex items-center gap-3 p-3 rounded-lg text-sm transition-all text-left group ${
-                                selectedEntityId === entity.id
-                                ? 'bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700'
-                                : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'
-                            }`}
-                        >
-                            <div className={`p-2 rounded-lg ${selectedEntityId === entity.id ? 'bg-datova-100 text-datova-600 dark:bg-datova-900/30 dark:text-datova-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
-                                {entity.type === 'Master' ? <User size={16}/> : entity.type === 'Event' ? <Activity size={16}/> : <Bot size={16}/>}
-                            </div>
-                            <div>
-                                <div className={`font-bold ${selectedEntityId === entity.id ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>{entity.name}</div>
-                                <div className="text-[10px] text-slate-400">{entity.fields.length} Fields • {entity.identityStats.confidence}</div>
-                            </div>
-                        </button>
-                    ))}
-                    
-                    <button className="w-full flex items-center justify-center gap-2 p-3 mt-2 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                        <Plus size={14} /> New Entity
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Content Area */}
-            <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
-                {selectedEntityId && (() => {
-                    const entity = mockUBDMEntities.find(e => e.id === selectedEntityId);
-                    if (!entity) return null;
-
-                    return (
-                        <>
-                            {/* Entity Header */}
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-white dark:bg-slate-900 z-10">
-                                <div>
-                                    <div className="flex items-center gap-3 mb-1">
-                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{entity.name}</h3>
-                                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase border border-indigo-100 dark:border-indigo-800">{entity.type} Entity</span>
-                                    </div>
-                                    <p className="text-sm text-slate-500 max-w-xl">{entity.description}</p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all">
-                                        <Code2 size={14}/> Export JSON
-                                    </button>
-                                    <button className="flex items-center gap-2 px-3 py-1.5 bg-datova-500 hover:bg-datova-600 rounded-lg text-xs font-bold text-white shadow-lg shadow-datova-500/20 transition-all">
-                                        <Settings size={14}/> Edit Schema
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* View Content */}
-                            <div className="flex-1 overflow-y-auto p-0 relative">
-                                {ubdmViewMode === 'schema' && (
-                                    <table className="w-full text-left text-sm">
-                                        <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
-                                            <tr>
-                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Field Name</th>
-                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Type</th>
-                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Origin / Lineage</th>
-                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Business Definition (Semantic)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                            {entity.fields.map((field, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex items-center gap-2 font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
-                                                            {field.key === 'PK' && <Key size={12} className="text-amber-500" />}
-                                                            {field.key === 'FK' && <Link size={12} className="text-indigo-500" />}
-                                                            {field.key === 'IDX' && <Search size={12} className="text-emerald-500" />}
-                                                            {field.name}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-xs">
-                                                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 font-mono text-slate-600 dark:text-slate-400">
-                                                            {field.type}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{field.origin}</span>
-                                                                {field.lineage && <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-1.5 rounded border border-indigo-100 dark:border-indigo-800">Mapped</span>}
-                                                            </div>
-                                                            <div className="text-[10px] text-slate-400 font-mono">{field.lineage}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                                                        {field.definition}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                )}
-
-                                {ubdmViewMode === 'lineage' && (
-                                    <div className="p-8 h-full flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/50">
-                                        <div className="flex items-center gap-8 relative">
-                                            {/* Source Systems */}
-                                            <div className="space-y-4">
-                                                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm w-48">
-                                                    <div className="flex items-center gap-2 mb-2 font-bold text-slate-900 dark:text-white"><Cloud size={16}/> Salesforce</div>
-                                                    <div className="text-xs text-slate-500">Lead.Email</div>
-                                                </div>
-                                                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm w-48">
-                                                    <div className="flex items-center gap-2 mb-2 font-bold text-slate-900 dark:text-white"><Database size={16}/> HubSpot</div>
-                                                    <div className="text-xs text-slate-500">Contact.email</div>
-                                                </div>
-                                            </div>
-
-                                            {/* Transformation */}
-                                            <div className="relative">
-                                                <div className="absolute top-1/2 -left-8 w-8 h-0.5 bg-slate-300 dark:bg-slate-600"></div>
-                                                <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-full shadow-sm z-10 relative">
-                                                    <GitMerge size={24} className="text-indigo-600 dark:text-indigo-400" />
-                                                </div>
-                                                <div className="absolute top-1/2 -right-8 w-8 h-0.5 bg-slate-300 dark:bg-slate-600"></div>
-                                                <div className="absolute top-10 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Coalesce & Validate</div>
-                                            </div>
-
-                                            {/* UBDM Entity */}
-                                            <div className="p-6 bg-white dark:bg-slate-800 border-2 border-datova-500 rounded-2xl shadow-xl w-64">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <div className="p-2 bg-datova-100 dark:bg-datova-900/30 rounded-lg text-datova-600">
-                                                        {entity.type === 'Master' ? <User size={20}/> : <Activity size={20}/>}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-lg text-slate-900 dark:text-white">{entity.name}</div>
-                                                        <div className="text-[10px] text-slate-400 font-bold uppercase">Canonical Entity</div>
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {entity.fields.slice(0,3).map(f => (
-                                                        <div key={f.name} className="flex justify-between text-xs p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">
-                                                            <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{f.name}</span>
-                                                            <span className="text-slate-400">{f.type}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {ubdmViewMode === 'identity' && (
-                                    <div className="p-8 h-full">
-                                        <div className="grid grid-cols-3 gap-6 mb-8">
-                                            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 rounded-xl text-center">
-                                                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">{entity.identityStats.resolved.toLocaleString()}</div>
-                                                <div className="text-xs font-bold text-emerald-700/60 dark:text-emerald-300/60 uppercase tracking-wider">Unique Identities</div>
-                                            </div>
-                                            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl text-center">
-                                                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">{entity.identityStats.duplicates.toLocaleString()}</div>
-                                                <div className="text-xs font-bold text-amber-700/60 dark:text-amber-300/60 uppercase tracking-wider">Duplicates Merged</div>
-                                            </div>
-                                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl text-center">
-                                                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{entity.identityStats.confidence}</div>
-                                                <div className="text-xs font-bold text-blue-700/60 dark:text-blue-300/60 uppercase tracking-wider">Match Confidence</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
-                                            <h5 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-                                                <Fingerprint size={18} className="text-datova-500"/> Golden Record Generation
-                                            </h5>
-                                            <div className="space-y-4">
-                                                <div className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300">JD</div>
-                                                        <div>
-                                                            <div className="font-bold text-sm text-slate-900 dark:text-white">John Doe</div>
-                                                            <div className="text-xs text-slate-500">3 Source Records Merged</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-[10px] text-slate-500">SFDC: 003...</div>
-                                                        <ArrowRight size={12} className="text-slate-300"/>
-                                                        <div className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-[10px] text-slate-500">HubSpot: 992...</div>
-                                                        <ArrowRight size={12} className="text-slate-300"/>
-                                                        <div className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-bold">UBDM: u-10293</div>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300">AS</div>
-                                                        <div>
-                                                            <div className="font-bold text-sm text-slate-900 dark:text-white">Alice Smith</div>
-                                                            <div className="text-xs text-slate-500">2 Source Records Merged</div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-[10px] text-slate-500">Shopify: 882...</div>
-                                                        <ArrowRight size={12} className="text-slate-300"/>
-                                                        <div className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-bold">UBDM: u-44912</div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </>
-                    );
-                })()}
-            </div>
-        </div>
-      </FeatureCard>
-
-      {/* Single Source of Truth Warehouse (Validation & Integrity) */}
-      <FeatureCard title="Single Source of Truth Warehouse" className="col-span-1 md:col-span-2">
-          {/* ... (Existing Validation Engine Code) ... */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Validation Engine */}
-              <div>
-                  <h5 className="font-bold text-slate-900 dark:text-white text-sm mb-4 flex items-center gap-2">
-                      <ShieldCheck size={16} className="text-datova-500"/> Validation Engine & Drift Detection
-                  </h5>
-                  
-                  <div className="space-y-3">
-                      <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600">
-                                  <Key size={14}/>
-                              </div>
-                              <div>
-                                  <div className="text-xs font-bold text-slate-900 dark:text-white">Constraint Checks</div>
-                                  <div className="text-[10px] text-slate-500">Active (Nulls, Uniqueness, FKs)</div>
-                              </div>
-                          </div>
-                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">99.8% Pass</span>
-                      </div>
-
-                      <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600">
-                                  <AlertOctagon size={14}/>
-                              </div>
-                              <div>
-                                  <div className="text-xs font-bold text-slate-900 dark:text-white">Schema Drift</div>
-                                  <div className="text-[10px] text-slate-500">Monitoring 12 pipelines</div>
-                              </div>
-                          </div>
-                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">1 Warning</span>
-                      </div>
-
-                      <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
-                          <h6 className="text-[10px] uppercase font-bold text-slate-400 mb-2">Live Validator Status</h6>
-                          <div className="flex items-center gap-2 mb-1">
-                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                              <span className="text-xs text-slate-600 dark:text-slate-300">Ingesting Batch #9921...</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                              <div className="h-full bg-datova-500 w-[65%] animate-pulse"></div>
-                          </div>
-                      </div>
-                  </div>
-              </div>
-
-              {/* Immutable Audit Logs */}
-              <div className="flex flex-col h-full">
-                  <div className="flex justify-between items-center mb-4">
-                      <h5 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-                          <FileText size={16} className="text-datova-500"/> Immutable Audit Logs
-                      </h5>
-                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-mono">EU AI Act Compliant</span>
-                  </div>
-                  
-                  <div className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden relative">
-                      <div className="absolute top-0 left-0 w-full h-full overflow-y-auto p-3 space-y-2 no-scrollbar">
-                          {mockWarehouseAudit.map((log) => (
-                              <div key={log.id} className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-1">
-                                  <div className="flex justify-between items-center">
-                                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-                                          log.status === 'Success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                                          log.status === 'Warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                          'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
-                                      }`}>
-                                          {log.action}
-                                      </span>
-                                      <span className="text-[10px] text-slate-400 font-mono">{log.timestamp}</span>
-                                  </div>
-                                  <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                      {log.source}: {log.details}
-                                  </div>
-                                  <div className="flex items-center gap-1 text-[9px] text-slate-400 font-mono mt-1 border-t border-slate-100 dark:border-slate-800 pt-1">
-                                      <Hash size={10} /> {log.hash}
-                                  </div>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-              </div>
-          </div>
-      </FeatureCard>
-
-      {/* Enhanced Data Quality Score */}
-      <FeatureCard title="Granular Data Quality & Scoring" className="col-span-1 md:col-span-2">
-        {/* ... (Existing Data Quality Score code remains same) ... */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 flex flex-col items-center justify-center p-4">
-                <div className="relative h-40 w-40 flex items-center justify-center shrink-0">
-                    <svg className="w-full h-full transform -rotate-90">
-                    <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-slate-100 dark:text-slate-800" />
-                    <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-emerald-500" strokeDasharray={440} strokeDashoffset={440 - (440 * 0.92)} />
-                    </svg>
-                    <div className="absolute flex flex-col items-center">
-                        <span className="text-4xl font-bold text-slate-900 dark:text-white">92</span>
-                        <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Quality Index</span>
-                    </div>
-                </div>
-                <div className="text-center mt-4 space-y-1">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white">High Trust Level</p>
-                    <p className="text-xs text-slate-500">Ready for Agentic Workflows</p>
-                </div>
-            </div>
-
-            <div className="lg:col-span-2 overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-800">
-                        <tr>
-                            <th className="px-4 py-3">Entity</th>
-                            <th className="px-4 py-3 text-center">Completeness</th>
-                            <th className="px-4 py-3 text-center">Accuracy</th>
-                            <th className="px-4 py-3 text-center">Consistency</th>
-                            <th className="px-4 py-3 text-right">Trend (7d)</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {mockEntityQuality.map((item, idx) => (
-                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{item.entity}</td>
-                                <td className="px-4 py-3 text-center">
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.completeness > 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                                        {item.completeness}%
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3 text-center text-xs font-mono text-slate-600 dark:text-slate-400">{item.accuracy}%</td>
-                                <td className="px-4 py-3 text-center text-xs font-mono text-slate-600 dark:text-slate-400">{item.consistency}%</td>
-                                <td className="px-4 py-3 text-right">
-                                    <div className={`flex items-center justify-end gap-1 text-xs font-bold ${item.trend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                        {item.trend > 0 ? <TrendingUp size={12}/> : item.trend < 0 ? <TrendingDown size={12}/> : null}
-                                        {item.trend > 0 ? '+' : ''}{item.trend}%
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-      </FeatureCard>
-    </div>
-  );
-
-  const renderOverviewTab = () => (
-    <div className="animate-fade-in grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div className="md:col-span-2 space-y-6">
-        <FeatureCard title="Executive AI Analysis">
-          <div className="prose prose-sm dark:prose-invert max-w-none text-slate-600 dark:text-slate-300">
-             {data.report ? (
-                <div className="space-y-4">
-                  {renderFormattedText(data.report)}
-                </div>
-             ) : (
-                <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                   <div className="animate-spin mb-4"><RefreshCw size={24}/></div>
-                   <p>Analyzing data points...</p>
-                </div>
-             )}
-          </div>
-        </FeatureCard>
-        
-        <div className="grid grid-cols-2 gap-4">
-             <div className="bg-indigo-50 dark:bg-indigo-900/20 p-6 rounded-[1.5rem] border border-indigo-100 dark:border-indigo-800">
-                <h3 className="text-2xl font-bold text-indigo-700 dark:text-indigo-300 mb-1">Reactive</h3>
-                <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider">Current Phase</p>
-             </div>
-             <div className="bg-emerald-50 dark:bg-emerald-900/20 p-6 rounded-[1.5rem] border border-emerald-100 dark:border-emerald-800">
-                <h3 className="text-2xl font-bold text-emerald-700 dark:text-emerald-300 mb-1">Defined</h3>
-                <p className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Target Phase (3mo)</p>
-             </div>
-        </div>
-      </div>
-
-      <div className="md:col-span-1">
-        <FeatureCard title="Maturity Radar" className="h-full min-h-[300px]">
-          <div className="h-full w-full flex items-center justify-center">
-             <ResponsiveContainer width="100%" height={300}>
-               <RadarChart cx="50%" cy="50%" outerRadius="70%" data={getRadarData()}>
-                 <PolarGrid stroke="#e2e8f0" />
-                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 10 }} />
-                 <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
-                 <Radar
-                   name="You"
-                   dataKey="A"
-                   stroke="#6366f1"
-                   strokeWidth={3}
-                   fill="#6366f1"
-                   fillOpacity={0.2}
-                 />
-                 <Tooltip 
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ color: '#6366f1', fontWeight: 'bold' }}
-                 />
-               </RadarChart>
-             </ResponsiveContainer>
-          </div>
-        </FeatureCard>
-      </div>
-    </div>
-  );
-
-  const renderIntelligenceTab = () => (
-    <div className="animate-fade-in space-y-6 h-full pb-6">
-        {/* Top Row: KPI Context & Temporal Reasoning */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* KPI Hierarchy Builder */}
-            <FeatureCard title="KPI Context Hierarchy" className="lg:col-span-2">
-                <div className="space-y-6">
-                    <p className="text-xs text-slate-500">Defining the relationships between business metrics to guide AI reasoning.</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {mockKPIHierarchy.map((kpi, i) => (
-                            <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 relative overflow-hidden">
-                                {/* Parent */}
-                                <div className="flex justify-between items-start mb-4 relative z-10">
-                                    <div>
-                                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Primary Metric</div>
-                                        <div className="text-lg font-bold text-slate-900 dark:text-white">{kpi.title}</div>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className="text-xl font-bold text-datova-600 dark:text-datova-400">{kpi.value}</div>
-                                        <div className="text-xs text-emerald-500 font-bold">{kpi.trend}</div>
-                                    </div>
-                                </div>
-                                
-                                {/* Connector */}
-                                <div className="absolute left-8 top-16 bottom-4 w-0.5 bg-slate-100 dark:bg-slate-800 z-0"></div>
-
-                                {/* Children */}
-                                <div className="space-y-3 relative z-10">
-                                    {kpi.children.map((child, j) => (
-                                        <div key={j} className="ml-6 flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 rounded-full bg-slate-300"></div>
-                                                <span className="font-medium text-slate-700 dark:text-slate-300">{child.title}</span>
-                                            </div>
-                                            <span className="font-mono text-slate-500">{child.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </FeatureCard>
-
-            {/* Temporal Reasoning */}
-            <FeatureCard title="Temporal Reasoning & Seasonality">
-                <div className="h-full flex flex-col">
-                    <p className="text-xs text-slate-500 mb-4">AI context aware of historical trends and seasonal spikes.</p>
-                    <div className="flex-1 min-h-[200px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={mockSeasonalityData}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                                <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                                <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                                <Legend verticalAlign="top" iconType="circle" wrapperStyle={{ fontSize: '10px' }}/>
-                                <Line type="monotone" dataKey="current" name="2024 (Actual)" stroke="#6366f1" strokeWidth={3} dot={false} />
-                                <Line type="monotone" dataKey="lastYear" name="2023 (Historical)" stroke="#cbd5e1" strokeWidth={2} dot={false} strokeDasharray="5 5" />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    </div>
-                    <div className="mt-4 flex gap-2">
-                        <div className="text-[10px] px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded border border-amber-100 dark:border-amber-800">
-                            Detected: Q2 Seasonal Spike
-                        </div>
-                    </div>
-                </div>
-            </FeatureCard>
-        </div>
-
-        {/* Bottom Row: Logic & Decisions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            
-            {/* Business Logic Encoding */}
-            <FeatureCard title="Business Logic Engine">
-                <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                        <p className="text-xs text-slate-500">Hard-coded rules that override probabilistic AI outputs.</p>
-                        <button className="text-xs font-bold text-datova-600 bg-datova-50 dark:bg-datova-900/20 px-3 py-1.5 rounded-lg border border-datova-100 dark:border-datova-800 flex items-center gap-1">
-                            <Plus size={12}/> Add Rule
-                        </button>
-                    </div>
-                    <div className="space-y-3">
-                        {mockLogicRules.map((rule) => (
-                            <div key={rule.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 flex gap-3">
-                                <div className={`mt-1 p-1.5 rounded-lg ${rule.type === 'Constraint' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30'}`}>
-                                    {rule.type === 'Constraint' ? <Lock size={14}/> : <GitCommit size={14}/>}
-                                </div>
-                                <div className="flex-1">
-                                    <div className="flex justify-between mb-1">
-                                        <span className="text-sm font-bold text-slate-900 dark:text-white">{rule.name}</span>
-                                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{rule.type}</span>
-                                    </div>
-                                    <div className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 p-2 rounded border border-slate-200 dark:border-slate-800">
-                                        {rule.condition} <span className="text-indigo-500 font-bold">THEN</span> {rule.action}
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </FeatureCard>
-
-            {/* Decision Context Engine */}
-            <FeatureCard title="Decision Context Engine">
-                <div className="grid grid-cols-2 gap-4 h-full">
-                    {/* Safe Zone */}
-                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/30">
-                        <div className="flex items-center gap-2 mb-4 text-emerald-700 dark:text-emerald-400 font-bold text-sm uppercase tracking-wide">
-                            <CheckCircle2 size={16}/> Autonomous
-                        </div>
-                        <ul className="space-y-2">
-                            {['L1 Support Replies', 'Refunds < $50', 'Data Categorization', 'Meeting Scheduling'].map((item, i) => (
-                                <li key={i} className="text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded shadow-sm border border-emerald-100 dark:border-emerald-900/20">
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Human Loop */}
-                    <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-4 border border-amber-100 dark:border-amber-900/30">
-                        <div className="flex items-center gap-2 mb-4 text-amber-700 dark:text-amber-400 font-bold text-sm uppercase tracking-wide">
-                            <User size={16}/> Human Approval
-                        </div>
-                        <ul className="space-y-2">
-                            {['Contract Generation', 'Refunds > $50', 'System Configuration', 'Publishing Content'].map((item, i) => (
-                                <li key={i} className="text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded shadow-sm border border-amber-100 dark:border-amber-900/20">
-                                    {item}
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
-            </FeatureCard>
-        </div>
-    </div>
-  );
-
-  const renderAutomationTab = () => (
-    <div className="animate-fade-in space-y-6 h-full pb-6">
-        
-        {/* Top Row: Agent Registry */}
-        <FeatureCard title="Agent Registry" action={
-            <button onClick={handleOpenAgentModal} className="text-xs bg-datova-500 text-white hover:bg-datova-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-all shadow-md shadow-datova-500/20">
-                <Plus size={14} /> Deploy Agent
-            </button>
-        }>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead>
-                        <tr className="text-slate-400 border-b border-slate-200 dark:border-slate-800 text-xs uppercase">
-                            <th className="pb-3 pl-4">Agent Name</th>
-                            <th className="pb-3">Type</th>
-                            <th className="pb-3">Input / Output</th>
-                            <th className="pb-3">Risk Level</th>
-                            <th className="pb-3 text-right pr-4">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {mockAgentRegistry.map((agent) => (
-                            <tr key={agent.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="py-3 pl-4 font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg ${agent.risk === 'High' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
-                                        <Bot size={16}/>
-                                    </div>
-                                    {agent.name}
-                                </td>
-                                <td className="py-3 text-slate-500 text-xs">{agent.type}</td>
-                                <td className="py-3 text-xs">
-                                    <div className="flex flex-col gap-1">
-                                        <span className="text-slate-500"><span className="font-bold">In:</span> {agent.inputs}</span>
-                                        <span className="text-slate-500"><span className="font-bold">Out:</span> {agent.outputs}</span>
-                                    </div>
-                                </td>
-                                <td className="py-3">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                                        agent.risk === 'High' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900' :
-                                        agent.risk === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900' :
-                                        'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900'
-                                    }`}>
-                                        {agent.risk}
-                                    </span>
-                                </td>
-                                <td className="py-3 pr-4 text-right">
-                                    <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${agent.status === 'Active' ? 'text-emerald-500' : 'text-slate-400'}`}>
-                                        <div className={`w-2 h-2 rounded-full ${agent.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                                        {agent.status}
-                                    </span>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </FeatureCard>
-
-        {/* Middle Row: Pipeline Orchestrator */}
-        <FeatureCard title="Orchestration Pipeline Visualizer">
-            <div className="relative h-64 w-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden p-8">
-                {/* Connecting Line */}
-                <div className="absolute top-1/2 left-10 right-10 h-0.5 bg-slate-200 dark:bg-slate-700 -z-0"></div>
-
-                <div className="flex justify-between w-full relative z-10">
-                    {mockPipelineSteps.map((step, idx) => (
-                        <div key={step.id} className="flex flex-col items-center gap-3 group relative">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border-2 transition-all duration-300 ${
-                                step.status === 'complete' ? 'bg-emerald-500 border-emerald-500 text-white' :
-                                step.status === 'pending' ? 'bg-amber-500 border-amber-500 text-white animate-pulse' :
-                                'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
-                            }`}>
-                                <step.icon size={20} />
-                            </div>
-                            
-                            <div className="text-center">
-                                <div className="text-xs font-bold text-slate-900 dark:text-white mb-0.5">{step.name}</div>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                    step.type === 'Deterministic' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:border-blue-900' :
-                                    step.type === 'Probabilistic' ? 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:border-purple-900' :
-                                    'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900'
-                                }`}>
-                                    {step.type}
-                                </span>
-                            </div>
-
-                            {/* Details Tooltip */}
-                            <div className="absolute top-full mt-2 w-32 p-2 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
-                                {step.desc}
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </FeatureCard>
-
-        {/* Bottom Row: Controls & Human Loop */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            
-            {/* Execution Controls */}
-            <FeatureCard title="Execution & Governance Controls">
-                <div className="space-y-6">
-                    {/* Kill Switch */}
-                    <div className="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-white dark:bg-rose-950 rounded-lg text-rose-600"><StopCircle size={20}/></div>
-                            <div>
-                                <div className="text-sm font-bold text-slate-900 dark:text-white">Global Kill Switch</div>
-                                <div className="text-xs text-rose-600 dark:text-rose-400">Emergency Stop All Agents</div>
-                            </div>
-                        </div>
-                        <button 
-                            onClick={() => setExecutionControls(prev => ({...prev, globalKillSwitch: !prev.globalKillSwitch}))}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${executionControls.globalKillSwitch ? 'bg-rose-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                        >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${executionControls.globalKillSwitch ? 'translate-x-6' : 'translate-x-1'}`} />
-                        </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2 text-slate-500 text-xs font-bold uppercase">
-                                <DollarSign size={14}/> Cost Ceiling
-                            </div>
-                            <div className="text-2xl font-bold text-slate-900 dark:text-white">${executionControls.maxDailyCost}</div>
-                            <input 
-                                type="range" min="10" max="500" 
-                                value={executionControls.maxDailyCost}
-                                onChange={(e) => setExecutionControls({...executionControls, maxDailyCost: parseInt(e.target.value)})}
-                                className="w-full mt-2 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-datova-500"
-                            />
-                            <div className="text-[10px] text-slate-400 mt-1 text-right">Daily Limit</div>
-                        </div>
-
-                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                            <div className="flex items-center gap-2 mb-2 text-slate-500 text-xs font-bold uppercase">
-                                <Gauge size={14}/> Rate Limit
-                            </div>
-                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{executionControls.rateLimit}</div>
-                            <input 
-                                type="range" min="10" max="1000" 
-                                value={executionControls.rateLimit}
-                                onChange={(e) => setExecutionControls({...executionControls, rateLimit: parseInt(e.target.value)})}
-                                className="w-full mt-2 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-datova-500"
-                            />
-                            <div className="text-[10px] text-slate-400 mt-1 text-right">Req / Min</div>
-                        </div>
-                    </div>
-                </div>
-            </FeatureCard>
-
-            {/* Human-in-the-Loop Queue */}
-            <FeatureCard title="Human-in-the-Loop Queue" action={
-                <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded font-bold">2 Pending</span>
-            }>
-                <div className="space-y-3 h-full overflow-y-auto max-h-[250px] no-scrollbar">
-                    {mockApprovalQueue.map((item) => (
-                        <div key={item.id} className="p-3 bg-white dark:bg-slate-900 border-l-4 border-amber-400 rounded-r-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <div className="flex justify-between items-start mb-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.agent}</span>
-                                <span className="text-[10px] text-slate-400">{item.time}</span>
-                            </div>
-                            <div className="font-bold text-sm text-slate-900 dark:text-white mb-2">{item.task}</div>
-                            
-                            <div className="flex items-center justify-between">
-                                <div className="text-xs text-slate-500">
-                                    Confidence: <span className="font-bold text-emerald-500">{item.confidence}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors">
-                                        <X size={14}/>
-                                    </button>
-                                    <button className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors">
-                                        <CheckCircle2 size={14}/>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    
-                    <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-2 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer">
-                        <FileJson size={20}/>
-                        <span className="text-xs font-medium">View Completed Audit Log</span>
-                    </div>
-                </div>
-            </FeatureCard>
-        </div>
-    </div>
-  );
-
-  const renderGovernanceTab = () => (
-      <div className="animate-fade-in space-y-6 h-full pb-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <FeatureCard title="Validation Rules" className="lg:col-span-2" action={
-                <button onClick={() => setShowRuleForm(true)} className="text-xs font-bold text-datova-600 dark:text-datova-400 hover:underline flex items-center gap-1">
-                    <Plus size={14}/> Add Rule
-                </button>
-            }>
-                <div className="space-y-3">
-                    {validationRules.map(rule => (
-                        <div key={rule.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <button onClick={() => toggleRule(rule.id)} className={`text-2xl ${rule.active ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                    {rule.active ? <ToggleRight /> : <ToggleRight className="rotate-180" />}
-                                </button>
-                                <div>
-                                    <div className="font-bold text-sm text-slate-900 dark:text-white">{rule.name}</div>
-                                    <div className="text-xs text-slate-500 font-mono">{rule.field} {rule.condition} "{rule.value}"</div>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                    <div className="text-xs font-bold text-slate-700 dark:text-slate-300">98.5% Pass</div>
-                                    <div className="text-[10px] text-slate-400">Last 24h</div>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
-                    {showRuleForm && (
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 animate-fade-in">
-                            <input 
-                                placeholder="Rule Name" 
-                                className="w-full p-2 text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"
-                                value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})}
-                            />
-                            <div className="flex gap-2">
-                                <input 
-                                    placeholder="Field (e.g. email)" 
-                                    className="flex-1 p-2 text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"
-                                    value={newRule.field} onChange={e => setNewRule({...newRule, field: e.target.value})}
-                                />
-                                <select className="p-2 text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white">
-                                    <option>Equals</option><option>Regex Match</option><option>Greater Than</option>
-                                </select>
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <button onClick={() => setShowRuleForm(false)} className="px-3 py-1.5 text-xs font-bold text-slate-500">Cancel</button>
-                                <button onClick={handleAddRule} className="px-3 py-1.5 text-xs font-bold bg-datova-500 text-white rounded">Save Rule</button>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            </FeatureCard>
-
-            <FeatureCard title="EU AI Act Compliance">
-                <div className="flex flex-col h-full justify-between">
-                    <div className="space-y-4">
-                        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 text-center">
-                            <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">High Risk</div>
-                            <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider">System Classification</div>
-                        </div>
-                        <div className="space-y-2">
-                            {mockComplianceDocs.map(doc => (
-                                <div key={doc.id} className="flex items-center justify-between p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                                    <div className="flex items-center gap-2 overflow-hidden">
-                                        <FileText size={14} className="text-slate-400 shrink-0"/>
-                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{doc.name}</span>
-                                    </div>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                                        doc.status === 'Ready' ? 'bg-emerald-100 text-emerald-600' :
-                                        doc.status === 'Pending' ? 'bg-slate-100 text-slate-500' :
-                                        'bg-amber-100 text-amber-600'
-                                    }`}>{doc.status}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <button 
-                        onClick={() => setShowComplianceModal(true)}
-                        className="w-full mt-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
-                    >
-                        <ShieldCheck size={16}/> Generate Audit Pack
-                    </button>
-                </div>
-            </FeatureCard>
-        </div>
-      </div>
-  );
-
-  const renderReliabilityTab = () => (
-      <div className="animate-fade-in space-y-6 h-full pb-6">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-indigo-900 dark:bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl relative overflow-hidden">
-            <div className="relative z-10">
-                <h3 className="text-xl font-bold mb-1">Validation & Reliability Hub</h3>
-                <p className="text-indigo-200 text-sm opacity-80">Automated gates ensuring clean data for AI operations.</p>
-            </div>
-            <div className="relative z-10 flex gap-3">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-800/50 rounded-lg border border-indigo-700/50 backdrop-blur-sm">
-                    <ShieldAlert size={16} className="text-emerald-400"/>
-                    <span className="text-xs font-bold">Gates Active</span>
-                </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-800/50 rounded-lg border border-indigo-700/50 backdrop-blur-sm">
-                    <Activity size={16} className="text-indigo-400"/>
-                    <span className="text-xs font-bold">Monitoring</span>
-                </div>
-            </div>
-            {/* Decorative background element */}
-            <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-indigo-600/20 to-transparent pointer-events-none"></div>
-        </div>
-
-        {/* Section 1: Pre-AI Validation Gates Visualizer */}
-        <FeatureCard title="Pre-AI Validation Gates">
-            <div className="relative h-48 w-full flex items-center justify-center overflow-x-auto no-scrollbar py-4">
-                {/* Connecting Line */}
-                <div className="absolute h-1 bg-slate-200 dark:bg-slate-700 w-[90%] left-[5%] top-1/2 -translate-y-1/2 z-0"></div>
-                
-                {/* Nodes */}
-                <div className="flex items-center gap-4 sm:gap-8 md:gap-12 relative z-10 w-full min-w-[600px] px-8 justify-between">
-                    {/* Node 1: Source */}
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
-                            <Database size={20} className="text-slate-500" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-500">Raw Data</span>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
-
-                    {/* Node 2: Validation Gate */}
-                    <div className="flex flex-col items-center gap-3 group cursor-pointer">
-                        <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 border-4 border-white dark:border-slate-900 transition-transform group-hover:scale-110">
-                            <ShieldCheck size={24} className="text-white" />
-                        </div>
-                        <div className="text-center">
-                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">Validation Gate</span>
-                            <span className="text-[10px] text-slate-400">Passing (99%)</span>
-                        </div>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
-
-                    {/* Node 3: Transformation */}
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
-                            <GitMerge size={20} className="text-indigo-500" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-500">Normalization</span>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
-
-                    {/* Node 4: AI Model */}
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border-2 border-datova-500 flex items-center justify-center shadow-lg relative">
-                            <Bot size={24} className="text-datova-500" />
-                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800"></div>
-                        </div>
-                        <span className="text-xs font-bold text-datova-600 dark:text-datova-400">AI Agent</span>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
-
-                    {/* Node 5: Output */}
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
-                            <Zap size={20} className="text-amber-500" />
-                        </div>
-                        <span className="text-xs font-bold text-slate-500">Action</span>
-                    </div>
-                </div>
-            </div>
-        </FeatureCard>
-
-        {/* Section 2: Continuous Monitoring */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FeatureCard title="Data Distribution Shift (Drift)">
-                <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={mockDriftData}>
-                            <defs>
-                                <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                                </linearGradient>
-                                <linearGradient id="colorBase" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#cbd5e1" stopOpacity={0.3}/>
-                                    <stop offset="95%" stopColor="#cbd5e1" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                            <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                            <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                            <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
-                            <Area type="monotone" dataKey="baseline" name="Training Baseline" stroke="#94a3b8" strokeWidth={2} fillOpacity={1} fill="url(#colorBase)" />
-                            <Area type="monotone" dataKey="current" name="Live Stream" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorCurrent)" />
-                        </AreaChart>
-                    </ResponsiveContainer>
-                </div>
-                <div className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg">
-                    <AlertOctagon size={14} className="text-amber-500" />
-                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400">Drift Detected (08:00)</span>
-                </div>
-            </FeatureCard>
-
-            <div className="space-y-6">
-                <FeatureCard title="Freshness Monitor" className="flex-1">
-                    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mb-3">
-                        <div className="flex items-center gap-3">
-                            <Clock size={20} className="text-blue-500" />
-                            <div>
-                                <div className="text-sm font-bold text-slate-900 dark:text-white">Last Successful Sync</div>
-                                <div className="text-xs text-slate-500">Salesforce CRM Pipeline</div>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">2m 4s ago</div>
-                            <div className="text-[10px] text-slate-400">Threshold: 5m</div>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                        <div className="flex items-center gap-3">
-                            <RefreshCw size={20} className="text-purple-500" />
-                            <div>
-                                <div className="text-sm font-bold text-slate-900 dark:text-white">Throughput Rate</div>
-                                <div className="text-xs text-slate-500">Events processed per second</div>
-                            </div>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-lg font-bold text-slate-900 dark:text-white">1,240 eps</div>
-                            <div className="text-[10px] text-emerald-500 flex items-center justify-end gap-1"><TrendingUp size={10}/> +12%</div>
-                        </div>
-                    </div>
-                </FeatureCard>
-
-                {/* Section 3: Auto-Remediation Controls */}
-                <FeatureCard title="Auto-Remediation Hooks">
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Auto-Pause Agent on Drift (>15%)</span>
-                            <button 
-                                onClick={() => setRemediationConfig(prev => ({...prev, autoPauseOnDrift: !prev.autoPauseOnDrift}))}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${remediationConfig.autoPauseOnDrift ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                            >
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${remediationConfig.autoPauseOnDrift ? 'translate-x-5' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Rollback Schema on Error</span>
-                            <button 
-                                onClick={() => setRemediationConfig(prev => ({...prev, autoRollbackOnSchemaError: !prev.autoRollbackOnSchemaError}))}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${remediationConfig.autoRollbackOnSchemaError ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                            >
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${remediationConfig.autoRollbackOnSchemaError ? 'translate-x-5' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Alert on Freshness Delay (>5m)</span>
-                            <button 
-                                onClick={() => setRemediationConfig(prev => ({...prev, alertOnFreshnessDelay: !prev.alertOnFreshnessDelay}))}
-                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${remediationConfig.alertOnFreshnessDelay ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                            >
-                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${remediationConfig.alertOnFreshnessDelay ? 'translate-x-5' : 'translate-x-1'}`} />
-                            </button>
-                        </div>
-                    </div>
-                </FeatureCard>
-            </div>
-        </div>
-
-        {/* Section 4: Failure Attribution Log */}
-        <FeatureCard title="Failure Trace & Attribution">
-            <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-800">
-                        <tr>
-                            <th className="px-4 py-3">Error Event</th>
-                            <th className="px-4 py-3">Attributed Root Cause (Upstream)</th>
-                            <th className="px-4 py-3">Remediation Status</th>
-                            <th className="px-4 py-3 text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {mockFailureTraces.map((trace, i) => (
-                            <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <td className="px-4 py-3">
-                                    <div className="flex flex-col">
-                                        <span className="font-bold text-rose-600 dark:text-rose-400 text-xs">{trace.error}</span>
-                                        <span className="text-[10px] text-slate-400 font-mono">{trace.time} • ID: {trace.id}</span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <div className="flex items-center gap-2">
-                                        <GitPullRequest size={14} className="text-slate-400"/>
-                                        <span className="text-xs text-slate-700 dark:text-slate-300">{trace.rootCause}</span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-3">
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                        trace.status === 'Auto-Paused' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
-                                    }`}>
-                                        {trace.status === 'Auto-Paused' ? <PauseCircle size={10}/> : <CheckCircle2 size={10}/>}
-                                        {trace.status}
-                                    </span>
-                                </td>
-                                <td className="px-4 py-3 text-right">
-                                    <button className="text-xs font-bold text-datova-500 hover:text-datova-600 transition-colors flex items-center justify-end gap-1 w-full">
-                                        View Trace <ArrowRight size={12}/>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </FeatureCard>
-      </div>
-  );
-
-  const renderAIConsoleTab = () => (
-      <div className="animate-fade-in h-full flex flex-col pb-6">
-        <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex flex-col relative">
-             <div className="absolute top-0 w-full p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-100 dark:border-slate-800 z-10 flex justify-between items-center">
-                 <div className="flex items-center gap-3">
-                     <div className="w-10 h-10 bg-datova-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-datova-500/30">
-                         <Sparkles size={20} />
-                     </div>
-                     <div>
-                         <h3 className="font-bold text-slate-900 dark:text-white">Datova Intelligence</h3>
-                         <div className="flex items-center gap-2">
-                             <span className="flex h-2 w-2 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                             </span>
-                             <span className="text-xs text-slate-500">Connected to Layer 2 (Semantic)</span>
-                         </div>
-                     </div>
-                 </div>
-                 <div className="flex gap-2">
-                     <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><Settings size={18}/></button>
-                     <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><History size={18}/></button>
-                 </div>
-             </div>
-
-             <div className="flex-1 overflow-y-auto p-6 pt-24 space-y-6">
-                 {chatMessages.map((msg, i) => (
-                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                         <div className={`max-w-xl p-4 rounded-2xl text-sm leading-relaxed ${
-                             msg.role === 'user' 
-                             ? 'bg-datova-500 text-white rounded-br-none shadow-lg shadow-datova-500/20' 
-                             : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none'
-                         }`}>
-                             {msg.role === 'ai' && <div className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Analysis</div>}
-                             {msg.text}
-                         </div>
-                     </div>
-                 ))}
-                 {isChatTyping && (
-                     <div className="flex justify-start">
-                         <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-bl-none flex gap-1">
-                             <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
-                             <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100"></span>
-                             <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200"></span>
-                         </div>
-                     </div>
-                 )}
-                 <div ref={chatEndRef}></div>
-             </div>
-
-             <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
-                 <form onSubmit={handleChatSubmit} className="relative max-w-4xl mx-auto">
-                     <input 
-                        type="text" 
-                        placeholder="Ask about your data (e.g., 'Analyze the revenue trend from last week' or 'Why did the order error rate spike?')"
-                        className="w-full pl-6 pr-14 py-4 rounded-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white shadow-sm"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                     />
-                     <button 
-                        type="submit"
-                        disabled={!chatInput.trim() || isChatTyping}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-datova-500 text-white rounded-full hover:bg-datova-600 disabled:opacity-50 disabled:hover:bg-datova-500 transition-colors shadow-md"
-                     >
-                         <ArrowRight size={20} />
-                     </button>
-                 </form>
-                 <div className="text-center mt-2 text-[10px] text-slate-400">
-                     Datova AI can make mistakes. Consider checking important information.
-                 </div>
-             </div>
-        </div>
-      </div>
-  );
-
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
         
@@ -2544,6 +1287,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                     <NavItem active={activeTab === 'intelligence'} onClick={() => setActiveTab('intelligence')} icon={BarChart3} label="Layer 2: Intelligence" />
                     <NavItem active={activeTab === 'automation'} onClick={() => setActiveTab('automation')} icon={Zap} label="Layer 3: Automation" />
                     <NavItem active={activeTab === 'governance'} onClick={() => setActiveTab('governance')} icon={ShieldCheck} label="Layer 4: Governance" badge="EU AI" />
+                    <NavItem active={activeTab === 'value'} onClick={() => setActiveTab('value')} icon={TrendingUp} label="Layer 5: Value" />
                 </div>
 
                 <div>
@@ -2598,6 +1342,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                 {activeTab === 'intelligence' && renderIntelligenceTab()}
                 {activeTab === 'automation' && renderAutomationTab()}
                 {activeTab === 'governance' && renderGovernanceTab()}
+                {activeTab === 'value' && renderValueTab()}
                 {activeTab === 'reliability' && renderReliabilityTab()}
                 {activeTab === 'ai_console' && renderAIConsoleTab()}
             </div>
