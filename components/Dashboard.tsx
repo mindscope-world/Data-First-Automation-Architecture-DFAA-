@@ -9,7 +9,7 @@ import {
   Play, Pause, MoreHorizontal, Cpu, Timer, History, XCircle, Key, Link,
   Brain, Sliders, ShieldCheck, TrendingUp, TrendingDown, Code2, Terminal, Siren, Construction, Lock,
   MousePointer2, Trash2, Move, Save, CornerDownRight, GitBranch, AlertTriangle, Plug, Scale, BookOpen, Eye, FileCheck,
-  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash
+  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash, ShieldAlert, GitPullRequest, PauseCircle, PlayCircle, RefreshCcw
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -46,6 +46,21 @@ const mockEntityQuality = [
     { entity: 'Transaction', completeness: 100, accuracy: 99, consistency: 98, trend: 0 },
     { entity: 'Product', completeness: 85, accuracy: 92, consistency: 88, trend: -1 },
     { entity: 'Agent_Log', completeness: 100, accuracy: 100, consistency: 100, trend: 5 },
+];
+
+const mockDriftData = [
+  { name: '00:00', baseline: 40, current: 42 },
+  { name: '04:00', baseline: 38, current: 45 },
+  { name: '08:00', baseline: 42, current: 68 }, // Drift spike
+  { name: '12:00', baseline: 45, current: 75 },
+  { name: '16:00', baseline: 40, current: 70 },
+  { name: '20:00', baseline: 35, current: 55 },
+  { name: '23:59', baseline: 38, current: 48 },
+];
+
+const mockFailureTraces = [
+    { id: 'err-882', time: '10:15 AM', error: 'Agent hallucination rate > 5%', rootCause: 'Schema drift in "Product_Type" field', status: 'Auto-Paused' },
+    { id: 'err-881', time: '09:45 AM', error: 'Downstream API rejection', rootCause: 'Null value in required "email" field', status: 'Remediated' },
 ];
 
 const mockMetricData = [
@@ -259,6 +274,13 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
     }
   });
   
+  // Reliability & Remediation State
+  const [remediationConfig, setRemediationConfig] = useState({
+      autoPauseOnDrift: true,
+      autoRollbackOnSchemaError: true,
+      alertOnFreshnessDelay: true
+  });
+
   // Compliance Generator State
   const [showComplianceModal, setShowComplianceModal] = useState(false);
   const [complianceStep, setComplianceStep] = useState(1);
@@ -1198,6 +1220,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
   };
 
   const renderFoundationTab = () => (
+    // ... (Existing implementation remains the same) ...
     <div className="animate-fade-in grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-y-auto no-scrollbar pb-10">
       <FeatureCard title="Data Ingestion & Pipelines" className="col-span-1 md:col-span-2">
         <div className="overflow-x-auto mb-4">
@@ -1498,8 +1521,9 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         </div>
       </FeatureCard>
 
-      {/* NEW: Single Source of Truth Warehouse (Validation & Integrity) */}
+      {/* Single Source of Truth Warehouse (Validation & Integrity) */}
       <FeatureCard title="Single Source of Truth Warehouse" className="col-span-1 md:col-span-2">
+          {/* ... (Existing Validation Engine Code) ... */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Validation Engine */}
               <div>
@@ -1586,6 +1610,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
 
       {/* Enhanced Data Quality Score */}
       <FeatureCard title="Granular Data Quality & Scoring" className="col-span-1 md:col-span-2">
+        {/* ... (Existing Data Quality Score code remains same) ... */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1 flex flex-col items-center justify-center p-4">
                 <div className="relative h-40 w-40 flex items-center justify-center shrink-0">
@@ -2016,68 +2041,237 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
 
   const renderReliabilityTab = () => (
       <div className="animate-fade-in space-y-6 h-full pb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FeatureCard title="System Health" className="md:col-span-3">
-                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                     <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 rounded-xl">
-                         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-2">Uptime (30d)</div>
-                         <div className="text-3xl font-bold text-slate-900 dark:text-white">99.99%</div>
-                     </div>
-                     <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl">
-                         <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Avg Latency</div>
-                         <div className="text-3xl font-bold text-slate-900 dark:text-white">42ms</div>
-                     </div>
-                     <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 rounded-xl">
-                         <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-2">API Usage</div>
-                         <div className="text-3xl font-bold text-slate-900 dark:text-white">85%</div>
-                     </div>
-                     <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-xl">
-                         <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-2">Active Pods</div>
-                         <div className="text-3xl font-bold text-slate-900 dark:text-white">12/20</div>
-                     </div>
-                 </div>
-
-                 <div className="space-y-4">
-                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Incident Log</h4>
-                     {mockReliabilityEvents.map(event => (
-                         <div key={event.id} className="flex gap-4 p-4 border-l-4 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm rounded-r-xl">
-                             <div className={`mt-1 p-1 rounded-full ${
-                                 event.type === 'success' ? 'text-emerald-500 bg-emerald-50' :
-                                 event.type === 'warning' ? 'text-amber-500 bg-amber-50' :
-                                 'text-blue-500 bg-blue-50'
-                             }`}>
-                                 {event.type === 'success' ? <CheckCircle2 size={16}/> : event.type === 'warning' ? <AlertTriangle size={16}/> : <Activity size={16}/>}
-                             </div>
-                             <div className="flex-1">
-                                 <div className="flex justify-between items-start">
-                                     <h5 className="font-bold text-sm text-slate-900 dark:text-white">{event.title}</h5>
-                                     <span className="text-xs text-slate-400">{event.time}</span>
-                                 </div>
-                                 <p className="text-xs text-slate-500 mt-1">{event.desc}</p>
-                             </div>
-                         </div>
-                     ))}
-                 </div>
-            </FeatureCard>
-
-            <FeatureCard title="Latency Monitor" className="md:col-span-3">
-                 <ResponsiveContainer width="100%" height={250}>
-                     <AreaChart data={mockLatencyData}>
-                        <defs>
-                            <linearGradient id="colorLat" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                         <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                         <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                         <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                         <Area type="monotone" dataKey="latency" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorLat)" />
-                     </AreaChart>
-                 </ResponsiveContainer>
-            </FeatureCard>
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-indigo-900 dark:bg-slate-900 text-white p-6 rounded-[2rem] shadow-xl relative overflow-hidden">
+            <div className="relative z-10">
+                <h3 className="text-xl font-bold mb-1">Validation & Reliability Hub</h3>
+                <p className="text-indigo-200 text-sm opacity-80">Automated gates ensuring clean data for AI operations.</p>
+            </div>
+            <div className="relative z-10 flex gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-800/50 rounded-lg border border-indigo-700/50 backdrop-blur-sm">
+                    <ShieldAlert size={16} className="text-emerald-400"/>
+                    <span className="text-xs font-bold">Gates Active</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-800/50 rounded-lg border border-indigo-700/50 backdrop-blur-sm">
+                    <Activity size={16} className="text-indigo-400"/>
+                    <span className="text-xs font-bold">Monitoring</span>
+                </div>
+            </div>
+            {/* Decorative background element */}
+            <div className="absolute right-0 top-0 h-full w-1/3 bg-gradient-to-l from-indigo-600/20 to-transparent pointer-events-none"></div>
         </div>
+
+        {/* Section 1: Pre-AI Validation Gates Visualizer */}
+        <FeatureCard title="Pre-AI Validation Gates">
+            <div className="relative h-48 w-full flex items-center justify-center overflow-x-auto no-scrollbar py-4">
+                {/* Connecting Line */}
+                <div className="absolute h-1 bg-slate-200 dark:bg-slate-700 w-[90%] left-[5%] top-1/2 -translate-y-1/2 z-0"></div>
+                
+                {/* Nodes */}
+                <div className="flex items-center gap-4 sm:gap-8 md:gap-12 relative z-10 w-full min-w-[600px] px-8 justify-between">
+                    {/* Node 1: Source */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
+                            <Database size={20} className="text-slate-500" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">Raw Data</span>
+                    </div>
+
+                    {/* Arrow */}
+                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
+
+                    {/* Node 2: Validation Gate */}
+                    <div className="flex flex-col items-center gap-3 group cursor-pointer">
+                        <div className="w-14 h-14 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 border-4 border-white dark:border-slate-900 transition-transform group-hover:scale-110">
+                            <ShieldCheck size={24} className="text-white" />
+                        </div>
+                        <div className="text-center">
+                            <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 block">Validation Gate</span>
+                            <span className="text-[10px] text-slate-400">Passing (99%)</span>
+                        </div>
+                    </div>
+
+                    {/* Arrow */}
+                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
+
+                    {/* Node 3: Transformation */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
+                            <GitMerge size={20} className="text-indigo-500" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">Normalization</span>
+                    </div>
+
+                    {/* Arrow */}
+                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
+
+                    {/* Node 4: AI Model */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-14 h-14 rounded-2xl bg-white dark:bg-slate-800 border-2 border-datova-500 flex items-center justify-center shadow-lg relative">
+                            <Bot size={24} className="text-datova-500" />
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white dark:border-slate-800"></div>
+                        </div>
+                        <span className="text-xs font-bold text-datova-600 dark:text-datova-400">AI Agent</span>
+                    </div>
+
+                    {/* Arrow */}
+                    <ArrowRight size={16} className="text-slate-300 dark:text-slate-600" />
+
+                    {/* Node 5: Output */}
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center shadow-lg">
+                            <Zap size={20} className="text-amber-500" />
+                        </div>
+                        <span className="text-xs font-bold text-slate-500">Action</span>
+                    </div>
+                </div>
+            </div>
+        </FeatureCard>
+
+        {/* Section 2: Continuous Monitoring */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FeatureCard title="Data Distribution Shift (Drift)">
+                <div className="h-64 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={mockDriftData}>
+                            <defs>
+                                <linearGradient id="colorCurrent" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                                </linearGradient>
+                                <linearGradient id="colorBase" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#cbd5e1" stopOpacity={0.3}/>
+                                    <stop offset="95%" stopColor="#cbd5e1" stopOpacity={0}/>
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                            <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                            <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                            <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px' }} />
+                            <Area type="monotone" dataKey="baseline" name="Training Baseline" stroke="#94a3b8" strokeWidth={2} fillOpacity={1} fill="url(#colorBase)" />
+                            <Area type="monotone" dataKey="current" name="Live Stream" stroke="#f59e0b" strokeWidth={2} fillOpacity={1} fill="url(#colorCurrent)" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="absolute top-6 right-6 flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-lg">
+                    <AlertOctagon size={14} className="text-amber-500" />
+                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400">Drift Detected (08:00)</span>
+                </div>
+            </FeatureCard>
+
+            <div className="space-y-6">
+                <FeatureCard title="Freshness Monitor" className="flex-1">
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl mb-3">
+                        <div className="flex items-center gap-3">
+                            <Clock size={20} className="text-blue-500" />
+                            <div>
+                                <div className="text-sm font-bold text-slate-900 dark:text-white">Last Successful Sync</div>
+                                <div className="text-xs text-slate-500">Salesforce CRM Pipeline</div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">2m 4s ago</div>
+                            <div className="text-[10px] text-slate-400">Threshold: 5m</div>
+                        </div>
+                    </div>
+                    <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                        <div className="flex items-center gap-3">
+                            <RefreshCw size={20} className="text-purple-500" />
+                            <div>
+                                <div className="text-sm font-bold text-slate-900 dark:text-white">Throughput Rate</div>
+                                <div className="text-xs text-slate-500">Events processed per second</div>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-lg font-bold text-slate-900 dark:text-white">1,240 eps</div>
+                            <div className="text-[10px] text-emerald-500 flex items-center justify-end gap-1"><TrendingUp size={10}/> +12%</div>
+                        </div>
+                    </div>
+                </FeatureCard>
+
+                {/* Section 3: Auto-Remediation Controls */}
+                <FeatureCard title="Auto-Remediation Hooks">
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Auto-Pause Agent on Drift (>15%)</span>
+                            <button 
+                                onClick={() => setRemediationConfig(prev => ({...prev, autoPauseOnDrift: !prev.autoPauseOnDrift}))}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${remediationConfig.autoPauseOnDrift ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                            >
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${remediationConfig.autoPauseOnDrift ? 'translate-x-5' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Rollback Schema on Error</span>
+                            <button 
+                                onClick={() => setRemediationConfig(prev => ({...prev, autoRollbackOnSchemaError: !prev.autoRollbackOnSchemaError}))}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${remediationConfig.autoRollbackOnSchemaError ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                            >
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${remediationConfig.autoRollbackOnSchemaError ? 'translate-x-5' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Alert on Freshness Delay (>5m)</span>
+                            <button 
+                                onClick={() => setRemediationConfig(prev => ({...prev, alertOnFreshnessDelay: !prev.alertOnFreshnessDelay}))}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${remediationConfig.alertOnFreshnessDelay ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                            >
+                                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${remediationConfig.alertOnFreshnessDelay ? 'translate-x-5' : 'translate-x-1'}`} />
+                            </button>
+                        </div>
+                    </div>
+                </FeatureCard>
+            </div>
+        </div>
+
+        {/* Section 4: Failure Attribution Log */}
+        <FeatureCard title="Failure Trace & Attribution">
+            <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-800">
+                        <tr>
+                            <th className="px-4 py-3">Error Event</th>
+                            <th className="px-4 py-3">Attributed Root Cause (Upstream)</th>
+                            <th className="px-4 py-3">Remediation Status</th>
+                            <th className="px-4 py-3 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {mockFailureTraces.map((trace, i) => (
+                            <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="px-4 py-3">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold text-rose-600 dark:text-rose-400 text-xs">{trace.error}</span>
+                                        <span className="text-[10px] text-slate-400 font-mono">{trace.time} • ID: {trace.id}</span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <GitPullRequest size={14} className="text-slate-400"/>
+                                        <span className="text-xs text-slate-700 dark:text-slate-300">{trace.rootCause}</span>
+                                    </div>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
+                                        trace.status === 'Auto-Paused' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                    }`}>
+                                        {trace.status === 'Auto-Paused' ? <PauseCircle size={10}/> : <CheckCircle2 size={10}/>}
+                                        {trace.status}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                    <button className="text-xs font-bold text-datova-500 hover:text-datova-600 transition-colors flex items-center justify-end gap-1 w-full">
+                                        View Trace <ArrowRight size={12}/>
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </FeatureCard>
       </div>
   );
 
