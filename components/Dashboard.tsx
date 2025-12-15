@@ -10,7 +10,7 @@ import {
   Brain, Sliders, ShieldCheck, TrendingUp, TrendingDown, Code2, Terminal, Siren, Construction, Lock,
   MousePointer2, Trash2, Move, Save, CornerDownRight, GitBranch, AlertTriangle, Plug, Scale, BookOpen, Eye, FileCheck,
   Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash, ShieldAlert, GitPullRequest, PauseCircle, PlayCircle, RefreshCcw,
-  ArrowDown, GitCommit, Calendar, Thermometer
+  ArrowDown, GitCommit, Calendar, Thermometer, StopCircle, DollarSign, Gauge, UserCheck, FileJson
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -181,6 +181,25 @@ const mockUBDMEntities = [
   }
 ];
 
+const mockAgentRegistry = [
+    { id: 'ag-01', name: 'Refund Handler', type: 'Transactional', risk: 'Low', inputs: 'Order ID', outputs: 'Refund Status', status: 'Active' },
+    { id: 'ag-02', name: 'Contract Analyzer', type: 'Analysis', risk: 'High', inputs: 'PDF Document', outputs: 'Risk Report', status: 'Active' },
+    { id: 'ag-03', name: 'Email Outreach', type: 'Generative', risk: 'Medium', inputs: 'Lead Context', outputs: 'Draft Email', status: 'Paused' },
+];
+
+const mockApprovalQueue = [
+    { id: 'task-992', agent: 'Contract Analyzer', task: 'Approve High-Value Contract', confidence: '89%', time: '10m ago' },
+    { id: 'task-998', agent: 'Refund Handler', task: 'Refund > $500 (Policy Limit)', confidence: '100%', time: '1h ago' },
+];
+
+const mockPipelineSteps = [
+    { id: 1, name: 'Ingest Ticket', type: 'Deterministic', icon: Database, status: 'complete', desc: 'SQL: Fetch context' },
+    { id: 2, name: 'Classify Intent', type: 'Probabilistic', icon: Brain, status: 'complete', desc: 'AI: Label triage' },
+    { id: 3, name: 'Check Policy', type: 'Deterministic', icon: Scale, status: 'complete', desc: 'Logic: Refund < $50?' }, // Business Logic
+    { id: 4, name: 'Draft Response', type: 'Probabilistic', icon: Sparkles, status: 'waiting', desc: 'AI: Gen email' }, // GenAI
+    { id: 5, name: 'Human Review', type: 'Human', icon: UserCheck, status: 'pending', desc: 'Approval Gate' },
+];
+
 const dashboardContext = {
   ingestion: mockIngestionData,
   cleaning: {
@@ -318,6 +337,13 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
       autoPauseOnDrift: true,
       autoRollbackOnSchemaError: true,
       alertOnFreshnessDelay: true
+  });
+
+  // Orchestration & Controls State
+  const [executionControls, setExecutionControls] = useState({
+    globalKillSwitch: false,
+    maxDailyCost: 50,
+    rateLimit: 100 // req/min
   });
 
   // Compliance Generator State
@@ -1905,90 +1931,189 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
 
   const renderAutomationTab = () => (
     <div className="animate-fade-in space-y-6 h-full pb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FeatureCard title="Active Agent Fleet" action={
-                <button onClick={handleOpenAgentModal} className="text-xs bg-datova-500 text-white hover:bg-datova-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-all shadow-md shadow-datova-500/20">
-                    <Plus size={14} /> Deploy Agent
-                </button>
-            }>
-                <div className="space-y-4">
-                     {agents.map((agent, i) => (
-                        <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:shadow-md transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-full ${
-                                    agent.status === 'busy' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 
-                                    agent.status === 'active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : 
-                                    'bg-slate-100 text-slate-500 dark:bg-slate-800'
-                                }`}>
-                                    <Bot size={20} />
-                                </div>
-                                <div>
-                                    <div className="font-bold text-slate-900 dark:text-white">{agent.name}</div>
-                                    <div className="text-xs text-slate-500">{agent.role} • Load: {agent.load}%</div>
-                                </div>
+        
+        {/* Top Row: Agent Registry */}
+        <FeatureCard title="Agent Registry" action={
+            <button onClick={handleOpenAgentModal} className="text-xs bg-datova-500 text-white hover:bg-datova-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-all shadow-md shadow-datova-500/20">
+                <Plus size={14} /> Deploy Agent
+            </button>
+        }>
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead>
+                        <tr className="text-slate-400 border-b border-slate-200 dark:border-slate-800 text-xs uppercase">
+                            <th className="pb-3 pl-4">Agent Name</th>
+                            <th className="pb-3">Type</th>
+                            <th className="pb-3">Input / Output</th>
+                            <th className="pb-3">Risk Level</th>
+                            <th className="pb-3 text-right pr-4">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {mockAgentRegistry.map((agent) => (
+                            <tr key={agent.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="py-3 pl-4 font-bold text-slate-900 dark:text-white flex items-center gap-3">
+                                    <div className={`p-2 rounded-lg ${agent.risk === 'High' ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-600' : 'bg-slate-100 dark:bg-slate-800 text-slate-500'}`}>
+                                        <Bot size={16}/>
+                                    </div>
+                                    {agent.name}
+                                </td>
+                                <td className="py-3 text-slate-500 text-xs">{agent.type}</td>
+                                <td className="py-3 text-xs">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-slate-500"><span className="font-bold">In:</span> {agent.inputs}</span>
+                                        <span className="text-slate-500"><span className="font-bold">Out:</span> {agent.outputs}</span>
+                                    </div>
+                                </td>
+                                <td className="py-3">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                        agent.risk === 'High' ? 'bg-rose-50 text-rose-600 border-rose-100 dark:bg-rose-900/20 dark:border-rose-900' :
+                                        agent.risk === 'Medium' ? 'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900' :
+                                        'bg-emerald-50 text-emerald-600 border-emerald-100 dark:bg-emerald-900/20 dark:border-emerald-900'
+                                    }`}>
+                                        {agent.risk}
+                                    </span>
+                                </td>
+                                <td className="py-3 pr-4 text-right">
+                                    <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${agent.status === 'Active' ? 'text-emerald-500' : 'text-slate-400'}`}>
+                                        <div className={`w-2 h-2 rounded-full ${agent.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                        {agent.status}
+                                    </span>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </FeatureCard>
+
+        {/* Middle Row: Pipeline Orchestrator */}
+        <FeatureCard title="Orchestration Pipeline Visualizer">
+            <div className="relative h-64 w-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800 overflow-hidden p-8">
+                {/* Connecting Line */}
+                <div className="absolute top-1/2 left-10 right-10 h-0.5 bg-slate-200 dark:bg-slate-700 -z-0"></div>
+
+                <div className="flex justify-between w-full relative z-10">
+                    {mockPipelineSteps.map((step, idx) => (
+                        <div key={step.id} className="flex flex-col items-center gap-3 group relative">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg border-2 transition-all duration-300 ${
+                                step.status === 'complete' ? 'bg-emerald-500 border-emerald-500 text-white' :
+                                step.status === 'pending' ? 'bg-amber-500 border-amber-500 text-white animate-pulse' :
+                                'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
+                            }`}>
+                                <step.icon size={20} />
                             </div>
-                            <div className="flex items-center gap-3">
-                                <div className="text-right hidden sm:block">
-                                    <div className="text-xs font-bold text-slate-900 dark:text-white">{agent.status === 'busy' ? 'Processing Task #922' : 'Waiting for triggers'}</div>
-                                    <div className="text-[10px] text-slate-500">Uptime: 4d 12h</div>
-                                </div>
-                                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400">
-                                    <MoreHorizontal size={16}/>
-                                </button>
+                            
+                            <div className="text-center">
+                                <div className="text-xs font-bold text-slate-900 dark:text-white mb-0.5">{step.name}</div>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                    step.type === 'Deterministic' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20 dark:border-blue-900' :
+                                    step.type === 'Probabilistic' ? 'bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/20 dark:border-purple-900' :
+                                    'bg-amber-50 text-amber-600 border-amber-100 dark:bg-amber-900/20 dark:border-amber-900'
+                                }`}>
+                                    {step.type}
+                                </span>
+                            </div>
+
+                            {/* Details Tooltip */}
+                            <div className="absolute top-full mt-2 w-32 p-2 bg-white dark:bg-slate-900 rounded-lg shadow-xl border border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+                                {step.desc}
                             </div>
                         </div>
-                     ))}
+                    ))}
+                </div>
+            </div>
+        </FeatureCard>
+
+        {/* Bottom Row: Controls & Human Loop */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Execution Controls */}
+            <FeatureCard title="Execution & Governance Controls">
+                <div className="space-y-6">
+                    {/* Kill Switch */}
+                    <div className="flex items-center justify-between p-4 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white dark:bg-rose-950 rounded-lg text-rose-600"><StopCircle size={20}/></div>
+                            <div>
+                                <div className="text-sm font-bold text-slate-900 dark:text-white">Global Kill Switch</div>
+                                <div className="text-xs text-rose-600 dark:text-rose-400">Emergency Stop All Agents</div>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => setExecutionControls(prev => ({...prev, globalKillSwitch: !prev.globalKillSwitch}))}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${executionControls.globalKillSwitch ? 'bg-rose-500' : 'bg-slate-300 dark:bg-slate-700'}`}
+                        >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${executionControls.globalKillSwitch ? 'translate-x-6' : 'translate-x-1'}`} />
+                        </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                            <div className="flex items-center gap-2 mb-2 text-slate-500 text-xs font-bold uppercase">
+                                <DollarSign size={14}/> Cost Ceiling
+                            </div>
+                            <div className="text-2xl font-bold text-slate-900 dark:text-white">${executionControls.maxDailyCost}</div>
+                            <input 
+                                type="range" min="10" max="500" 
+                                value={executionControls.maxDailyCost}
+                                onChange={(e) => setExecutionControls({...executionControls, maxDailyCost: parseInt(e.target.value)})}
+                                className="w-full mt-2 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-datova-500"
+                            />
+                            <div className="text-[10px] text-slate-400 mt-1 text-right">Daily Limit</div>
+                        </div>
+
+                        <div className="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                            <div className="flex items-center gap-2 mb-2 text-slate-500 text-xs font-bold uppercase">
+                                <Gauge size={14}/> Rate Limit
+                            </div>
+                            <div className="text-2xl font-bold text-slate-900 dark:text-white">{executionControls.rateLimit}</div>
+                            <input 
+                                type="range" min="10" max="1000" 
+                                value={executionControls.rateLimit}
+                                onChange={(e) => setExecutionControls({...executionControls, rateLimit: parseInt(e.target.value)})}
+                                className="w-full mt-2 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-datova-500"
+                            />
+                            <div className="text-[10px] text-slate-400 mt-1 text-right">Req / Min</div>
+                        </div>
+                    </div>
                 </div>
             </FeatureCard>
 
-            <FeatureCard title="Predictive Workflows">
-                 <div className="h-64 flex items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 relative overflow-hidden group">
-                     {/* Simplified Workflow Viz using nodes state */}
-                     <div className="absolute inset-0 p-4" ref={canvasRef} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
-                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                            {workflowEdges.map(edge => {
-                                const source = workflowNodes.find(n => n.id === edge.source);
-                                const target = workflowNodes.find(n => n.id === edge.target);
-                                if (!source || !target) return null;
-                                return (
-                                    <line 
-                                        key={edge.id} 
-                                        x1={source.x + 80} y1={source.y + 30} 
-                                        x2={target.x + 80} y2={target.y + 30} 
-                                        stroke="#94a3b8" 
-                                        strokeWidth="2" 
-                                    />
-                                );
-                            })}
-                        </svg>
-                        {workflowNodes.map(node => (
-                            <div 
-                                key={node.id}
-                                style={{ left: node.x, top: node.y }}
-                                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                                onClick={(e) => startLinking(e, node.id)}
-                                className={`absolute w-40 p-3 rounded-xl border shadow-sm z-10 cursor-move transition-colors flex items-center gap-2 ${
-                                    selectedNodeId === node.id ? 'border-datova-500 ring-2 ring-datova-500/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
-                                }`}
-                            >
-                                <div className={`p-1.5 rounded-lg ${
-                                    node.type === 'trigger' ? 'bg-amber-100 text-amber-600' :
-                                    node.type === 'action' ? 'bg-blue-100 text-blue-600' :
-                                    node.type === 'agent' ? 'bg-purple-100 text-purple-600' :
-                                    'bg-slate-100 text-slate-500'
-                                }`}>
-                                    {node.type === 'trigger' ? <Zap size={14}/> : node.type === 'agent' ? <Bot size={14}/> : <Activity size={14}/>}
-                                </div>
-                                <span className="text-xs font-bold truncate select-none text-slate-700 dark:text-slate-200">{node.label}</span>
+            {/* Human-in-the-Loop Queue */}
+            <FeatureCard title="Human-in-the-Loop Queue" action={
+                <span className="text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded font-bold">2 Pending</span>
+            }>
+                <div className="space-y-3 h-full overflow-y-auto max-h-[250px] no-scrollbar">
+                    {mockApprovalQueue.map((item) => (
+                        <div key={item.id} className="p-3 bg-white dark:bg-slate-900 border-l-4 border-amber-400 rounded-r-xl shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <div className="flex justify-between items-start mb-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{item.agent}</span>
+                                <span className="text-[10px] text-slate-400">{item.time}</span>
                             </div>
-                        ))}
-                     </div>
-                     <div className="absolute bottom-4 right-4 flex gap-2">
-                        <div className="text-[10px] text-slate-400 bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm border border-slate-200 dark:border-slate-700">
-                             Drag to move • Click to link
+                            <div className="font-bold text-sm text-slate-900 dark:text-white mb-2">{item.task}</div>
+                            
+                            <div className="flex items-center justify-between">
+                                <div className="text-xs text-slate-500">
+                                    Confidence: <span className="font-bold text-emerald-500">{item.confidence}</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button className="p-1.5 rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 transition-colors">
+                                        <X size={14}/>
+                                    </button>
+                                    <button className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors">
+                                        <CheckCircle2 size={14}/>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                     </div>
-                 </div>
+                    ))}
+                    
+                    <div className="p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-2 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors cursor-pointer">
+                        <FileJson size={20}/>
+                        <span className="text-xs font-medium">View Completed Audit Log</span>
+                    </div>
+                </div>
             </FeatureCard>
         </div>
     </div>
