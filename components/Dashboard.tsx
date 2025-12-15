@@ -9,7 +9,8 @@ import {
   Play, Pause, MoreHorizontal, Cpu, Timer, History, XCircle, Key, Link,
   Brain, Sliders, ShieldCheck, TrendingUp, TrendingDown, Code2, Terminal, Siren, Construction, Lock,
   MousePointer2, Trash2, Move, Save, CornerDownRight, GitBranch, AlertTriangle, Plug, Scale, BookOpen, Eye, FileCheck,
-  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash, ShieldAlert, GitPullRequest, PauseCircle, PlayCircle, RefreshCcw
+  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash, ShieldAlert, GitPullRequest, PauseCircle, PlayCircle, RefreshCcw,
+  ArrowDown, GitCommit, Calendar, Thermometer
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -98,6 +99,44 @@ const mockComplianceDocs = [
   { id: '2', name: 'Conformity Assessment', status: 'Review', type: 'DOCX', date: 'Oct 23, 2023' },
   { id: '3', name: 'EU Database Registration', status: 'Pending', type: 'Form', date: '-' },
   { id: '4', name: 'Bias Audit Report', status: 'Ready', type: 'PDF', date: 'Oct 22, 2023' },
+];
+
+const mockKPIHierarchy = [
+  {
+    title: "Net Revenue Retention",
+    value: "115%",
+    trend: "+5%",
+    status: "good",
+    children: [
+      { title: "Expansion", value: "$45k", status: "good" },
+      { title: "Churn", value: "2.1%", status: "warning" }
+    ]
+  },
+  {
+    title: "Support Efficiency",
+    value: "92%",
+    trend: "+12%",
+    status: "good",
+    children: [
+      { title: "Auto-Resolution", value: "65%", status: "good" },
+      { title: "Escalation Rate", value: "8%", status: "stable" }
+    ]
+  }
+];
+
+const mockLogicRules = [
+  { id: 1, name: 'Margin Protection', condition: 'IF margin < 18%', action: 'Block Transaction', type: 'Constraint' },
+  { id: 2, name: 'VIP Routing', condition: 'IF LTV > $10k', action: 'Route to Priority Queue', type: 'Logic' },
+  { id: 3, name: 'Inventory Safety', condition: 'IF stock < 10 units', action: 'Prevent Bulk Order', type: 'Constraint' },
+];
+
+const mockSeasonalityData = [
+  { month: 'Jan', current: 4000, lastYear: 3200, seasonality: 'Low' },
+  { month: 'Feb', current: 4200, lastYear: 3400, seasonality: 'Low' },
+  { month: 'Mar', current: 5800, lastYear: 4500, seasonality: 'High' }, // Spike
+  { month: 'Apr', current: 5100, lastYear: 4100, seasonality: 'Medium' },
+  { month: 'May', current: 5300, lastYear: 4300, seasonality: 'Medium' },
+  { month: 'Jun', current: 6100, lastYear: 4800, seasonality: 'High' },
 ];
 
 // Enhanced UBDM Data
@@ -1727,131 +1766,136 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
 
   const renderIntelligenceTab = () => (
     <div className="animate-fade-in space-y-6 h-full pb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <FeatureCard title="ROI & Value Measurement" className="md:col-span-2" action={
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-500">Forecasting</span>
-                    <button 
-                        onClick={() => setShowForecast(!showForecast)}
-                        className={`w-10 h-5 rounded-full p-0.5 transition-colors ${showForecast ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-700'}`}
-                    >
-                        <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform ${showForecast ? 'translate-x-5' : 'translate-x-0'}`}></div>
-                    </button>
-                </div>
-            }>
-                <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={mockMetricData}>
-                        <defs>
-                            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#f43f5e" stopOpacity={0}/>
-                            </linearGradient>
-                        </defs>
-                        <XAxis dataKey="name" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `$${val}`} />
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                        <Area type="monotone" dataKey="revenue" name="Actual Revenue" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
-                        <Area type="monotone" dataKey="cost" name="Cost" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorCost)" />
-                        {showForecast && (
-                            <Line type="monotone" dataKey="forecast" name="Projected Revenue" stroke="#6366f1" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                        )}
-                    </AreaChart>
-                </ResponsiveContainer>
-                {showForecast && (
-                    <div className="absolute top-20 right-8 bg-indigo-50 dark:bg-indigo-900/20 p-2 rounded-lg border border-indigo-100 dark:border-indigo-800 text-xs text-indigo-600 dark:text-indigo-300 font-bold animate-fade-in">
-                        +18% projected growth with automation
-                    </div>
-                )}
-            </FeatureCard>
+        {/* Top Row: KPI Context & Temporal Reasoning */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <FeatureCard title="Efficiency Gain">
-                 <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={mockMetricData}>
-                        <XAxis dataKey="name" hide />
-                        <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '12px' }} />
-                        <Bar dataKey="efficiency" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                 </ResponsiveContainer>
+            {/* KPI Hierarchy Builder */}
+            <FeatureCard title="KPI Context Hierarchy" className="lg:col-span-2">
+                <div className="space-y-6">
+                    <p className="text-xs text-slate-500">Defining the relationships between business metrics to guide AI reasoning.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {mockKPIHierarchy.map((kpi, i) => (
+                            <div key={i} className="p-4 border border-slate-200 dark:border-slate-700 rounded-2xl bg-white dark:bg-slate-900 relative overflow-hidden">
+                                {/* Parent */}
+                                <div className="flex justify-between items-start mb-4 relative z-10">
+                                    <div>
+                                        <div className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Primary Metric</div>
+                                        <div className="text-lg font-bold text-slate-900 dark:text-white">{kpi.title}</div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-xl font-bold text-datova-600 dark:text-datova-400">{kpi.value}</div>
+                                        <div className="text-xs text-emerald-500 font-bold">{kpi.trend}</div>
+                                    </div>
+                                </div>
+                                
+                                {/* Connector */}
+                                <div className="absolute left-8 top-16 bottom-4 w-0.5 bg-slate-100 dark:bg-slate-800 z-0"></div>
+
+                                {/* Children */}
+                                <div className="space-y-3 relative z-10">
+                                    {kpi.children.map((child, j) => (
+                                        <div key={j} className="ml-6 flex items-center justify-between p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-slate-300"></div>
+                                                <span className="font-medium text-slate-700 dark:text-slate-300">{child.title}</span>
+                                            </div>
+                                            <span className="font-mono text-slate-500">{child.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </FeatureCard>
+
+            {/* Temporal Reasoning */}
+            <FeatureCard title="Temporal Reasoning & Seasonality">
+                <div className="h-full flex flex-col">
+                    <p className="text-xs text-slate-500 mb-4">AI context aware of historical trends and seasonal spikes.</p>
+                    <div className="flex-1 min-h-[200px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={mockSeasonalityData}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                                <XAxis dataKey="month" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
+                                <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                                <Legend verticalAlign="top" iconType="circle" wrapperStyle={{ fontSize: '10px' }}/>
+                                <Line type="monotone" dataKey="current" name="2024 (Actual)" stroke="#6366f1" strokeWidth={3} dot={false} />
+                                <Line type="monotone" dataKey="lastYear" name="2023 (Historical)" stroke="#cbd5e1" strokeWidth={2} dot={false} strokeDasharray="5 5" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 flex gap-2">
+                        <div className="text-[10px] px-2 py-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 rounded border border-amber-100 dark:border-amber-800">
+                            Detected: Q2 Seasonal Spike
+                        </div>
+                    </div>
+                </div>
             </FeatureCard>
         </div>
 
-        {/* Module 5: Intelligence Layer (Context Encoding) */}
+        {/* Bottom Row: Logic & Decisions */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <FeatureCard title="Semantic Layer Definition (UBDM)">
+            
+            {/* Business Logic Encoding */}
+            <FeatureCard title="Business Logic Engine">
                 <div className="space-y-4">
-                    <p className="text-xs text-slate-500 mb-2">Encode business logic to prevent AI hallucination and logic drift.</p>
-                    <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
-                        <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-800">
-                                <tr>
-                                    <th className="px-4 py-2">Business Term</th>
-                                    <th className="px-4 py-2">Formal Definition (SQL/Logic)</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">Active Customer</td>
-                                    <td className="px-4 py-3 font-mono text-xs text-slate-500">orders &gt; 0 AND last_login &lt; 30_days</td>
-                                </tr>
-                                <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">Churn Risk</td>
-                                    <td className="px-4 py-3 font-mono text-xs text-slate-500">usage_drop &gt; 20% OR support_tickets &gt; 3</td>
-                                </tr>
-                                <tr className="group hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">Gross Revenue</td>
-                                    <td className="px-4 py-3 font-mono text-xs text-slate-500">sum(order_total) - sum(refunds) - sum(tax)</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div className="flex justify-between items-center">
+                        <p className="text-xs text-slate-500">Hard-coded rules that override probabilistic AI outputs.</p>
+                        <button className="text-xs font-bold text-datova-600 bg-datova-50 dark:bg-datova-900/20 px-3 py-1.5 rounded-lg border border-datova-100 dark:border-datova-800 flex items-center gap-1">
+                            <Plus size={12}/> Add Rule
+                        </button>
                     </div>
-                    <button className="w-full py-2 border border-dashed border-slate-300 dark:border-slate-700 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2">
-                        <Plus size={14} /> Add Definition
-                    </button>
+                    <div className="space-y-3">
+                        {mockLogicRules.map((rule) => (
+                            <div key={rule.id} className="p-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-900/50 flex gap-3">
+                                <div className={`mt-1 p-1.5 rounded-lg ${rule.type === 'Constraint' ? 'bg-rose-100 text-rose-600 dark:bg-rose-900/30' : 'bg-blue-100 text-blue-600 dark:bg-blue-900/30'}`}>
+                                    {rule.type === 'Constraint' ? <Lock size={14}/> : <GitCommit size={14}/>}
+                                </div>
+                                <div className="flex-1">
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-sm font-bold text-slate-900 dark:text-white">{rule.name}</span>
+                                        <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{rule.type}</span>
+                                    </div>
+                                    <div className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-950 p-2 rounded border border-slate-200 dark:border-slate-800">
+                                        {rule.condition} <span className="text-indigo-500 font-bold">THEN</span> {rule.action}
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </FeatureCard>
 
+            {/* Decision Context Engine */}
             <FeatureCard title="Decision Context Engine">
-                <div className="space-y-4">
-                    <p className="text-xs text-slate-500 mb-2">Define autonomous boundaries. What can the AI decide without a human?</p>
-                    
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-xl">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-white dark:bg-emerald-950 rounded-lg text-emerald-600"><CheckCircle2 size={16}/></div>
-                                <div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white">Auto-Refund Approval</div>
-                                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">IF amount &lt; $50 AND fraud_score &lt; 10</div>
-                                </div>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-white dark:bg-emerald-950 text-emerald-600 px-2 py-1 rounded">Autonomous</span>
+                <div className="grid grid-cols-2 gap-4 h-full">
+                    {/* Safe Zone */}
+                    <div className="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl p-4 border border-emerald-100 dark:border-emerald-900/30">
+                        <div className="flex items-center gap-2 mb-4 text-emerald-700 dark:text-emerald-400 font-bold text-sm uppercase tracking-wide">
+                            <CheckCircle2 size={16}/> Autonomous
                         </div>
+                        <ul className="space-y-2">
+                            {['L1 Support Replies', 'Refunds < $50', 'Data Categorization', 'Meeting Scheduling'].map((item, i) => (
+                                <li key={i} className="text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded shadow-sm border border-emerald-100 dark:border-emerald-900/20">
+                                    {item}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
 
-                        <div className="flex items-center justify-between p-3 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-900/30 rounded-xl">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-white dark:bg-emerald-950 rounded-lg text-emerald-600"><CheckCircle2 size={16}/></div>
-                                <div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white">L1 Support Response</div>
-                                    <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono">IF confidence &gt; 95% AND sentiment != 'angry'</div>
-                                </div>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-white dark:bg-emerald-950 text-emerald-600 px-2 py-1 rounded">Autonomous</span>
+                    {/* Human Loop */}
+                    <div className="bg-amber-50/50 dark:bg-amber-900/10 rounded-xl p-4 border border-amber-100 dark:border-amber-900/30">
+                        <div className="flex items-center gap-2 mb-4 text-amber-700 dark:text-amber-400 font-bold text-sm uppercase tracking-wide">
+                            <User size={16}/> Human Approval
                         </div>
-
-                        <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30 rounded-xl">
-                            <div className="flex items-center gap-3">
-                                <div className="p-1.5 bg-white dark:bg-amber-950 rounded-lg text-amber-600"><User size={16}/></div>
-                                <div>
-                                    <div className="text-sm font-bold text-slate-900 dark:text-white">Contract Generation</div>
-                                    <div className="text-xs text-amber-600 dark:text-amber-400 font-mono">ALWAYS require approval</div>
-                                </div>
-                            </div>
-                            <span className="text-[10px] font-bold uppercase tracking-wider bg-white dark:bg-amber-950 text-amber-600 px-2 py-1 rounded">Human Loop</span>
-                        </div>
+                        <ul className="space-y-2">
+                            {['Contract Generation', 'Refunds > $50', 'System Configuration', 'Publishing Content'].map((item, i) => (
+                                <li key={i} className="text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 p-2 rounded shadow-sm border border-amber-100 dark:border-amber-900/20">
+                                    {item}
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
             </FeatureCard>
