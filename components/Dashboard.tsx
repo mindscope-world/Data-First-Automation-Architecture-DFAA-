@@ -9,7 +9,7 @@ import {
   Play, Pause, MoreHorizontal, Cpu, Timer, History, XCircle, Key, Link,
   Brain, Sliders, ShieldCheck, TrendingUp, TrendingDown, Code2, Terminal, Siren, Construction, Lock,
   MousePointer2, Trash2, Move, Save, CornerDownRight, GitBranch, AlertTriangle, Plug, Scale, BookOpen, Eye, FileCheck,
-  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight
+  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight, Hash
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -33,6 +33,19 @@ const mockCleaningLog = [
 const mockAnomalies = [
   { id: 1, type: 'Schema Drift', desc: 'New field "loyalty_score" detected in Shopify stream.', severity: 'medium', time: '10m ago' },
   { id: 2, type: 'Value Outlier', desc: 'Order value $99,999 exceeds 3-sigma threshold.', severity: 'high', time: '1h ago' },
+];
+
+const mockWarehouseAudit = [
+    { id: 'evt-102', action: 'Constraint Check', source: 'Validation Engine', status: 'Failed', timestamp: '10:42:01 AM', hash: '0x8f...2a', details: 'NULL value in NOT NULL field "order_id"' },
+    { id: 'evt-101', action: 'Schema Update', source: 'Shopify Stream', status: 'Warning', timestamp: '09:15:33 AM', hash: '0x7b...9c', details: 'Drift Detected: Field "tax_id" added' },
+    { id: 'evt-100', action: 'Ingestion Batch', source: 'Salesforce CRM', status: 'Success', timestamp: '08:00:00 AM', hash: '0x3d...1f', details: '15,000 records committed' },
+];
+
+const mockEntityQuality = [
+    { entity: 'Customer', completeness: 98, accuracy: 95, consistency: 99, trend: 2 },
+    { entity: 'Transaction', completeness: 100, accuracy: 99, consistency: 98, trend: 0 },
+    { entity: 'Product', completeness: 85, accuracy: 92, consistency: 88, trend: -1 },
+    { entity: 'Agent_Log', completeness: 100, accuracy: 100, consistency: 100, trend: 5 },
 ];
 
 const mockMetricData = [
@@ -1143,18 +1156,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                          </div>
                       )}
 
-                      {syncMode === 'schedule' && (
-                        <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Sync Frequency</label>
-                          <select className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white">
-                             <option>Every 15 minutes</option>
-                             <option>Hourly</option>
-                             <option>Daily (Midnight UTC)</option>
-                             <option>Weekly</option>
-                          </select>
-                        </div>
-                      )}
-                      
                       {selectedIntegration?.id !== 'csv' && (
                           <div className="flex justify-end mt-2">
                               <button 
@@ -1262,7 +1263,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         </div>
       </FeatureCard>
 
-      {/* NEW: Unified Business Data Model (UBDM) Studio */}
+      {/* Unified Business Data Model (UBDM) Studio */}
       <FeatureCard title="Unified Business Data Model (UBDM) Studio" className="col-span-1 md:col-span-2" action={
        <div className="flex gap-2">
           <button onClick={() => setUbdmViewMode('schema')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'schema' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Schema View"><Layers size={16}/></button>
@@ -1497,45 +1498,145 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         </div>
       </FeatureCard>
 
-      <FeatureCard title="Data Quality Score" className="col-span-1 md:col-span-2">
-        {/* ... (Existing Data Quality Score code remains same) ... */}
-        <div className="flex flex-col md:flex-row items-center gap-6 md:gap-12 p-2">
-          <div className="relative h-32 w-32 flex items-center justify-center shrink-0">
-            <svg className="w-full h-full transform -rotate-90">
-              <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-200 dark:text-slate-700" />
-              <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-datova-500" strokeDasharray={351} strokeDashoffset={351 - (351 * 0.85)} />
-            </svg>
-            <div className="absolute flex flex-col items-center">
-                <span className="text-3xl font-bold text-slate-900 dark:text-white">85</span>
-                <span className="text-[10px] text-slate-500 uppercase font-bold">Excellent</span>
-            </div>
+      {/* NEW: Single Source of Truth Warehouse (Validation & Integrity) */}
+      <FeatureCard title="Single Source of Truth Warehouse" className="col-span-1 md:col-span-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Validation Engine */}
+              <div>
+                  <h5 className="font-bold text-slate-900 dark:text-white text-sm mb-4 flex items-center gap-2">
+                      <ShieldCheck size={16} className="text-datova-500"/> Validation Engine & Drift Detection
+                  </h5>
+                  
+                  <div className="space-y-3">
+                      <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                              <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600">
+                                  <Key size={14}/>
+                              </div>
+                              <div>
+                                  <div className="text-xs font-bold text-slate-900 dark:text-white">Constraint Checks</div>
+                                  <div className="text-[10px] text-slate-500">Active (Nulls, Uniqueness, FKs)</div>
+                              </div>
+                          </div>
+                          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">99.8% Pass</span>
+                      </div>
+
+                      <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                              <div className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-900/30 text-amber-600">
+                                  <AlertOctagon size={14}/>
+                              </div>
+                              <div>
+                                  <div className="text-xs font-bold text-slate-900 dark:text-white">Schema Drift</div>
+                                  <div className="text-[10px] text-slate-500">Monitoring 12 pipelines</div>
+                              </div>
+                          </div>
+                          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">1 Warning</span>
+                      </div>
+
+                      <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-950/50 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                          <h6 className="text-[10px] uppercase font-bold text-slate-400 mb-2">Live Validator Status</h6>
+                          <div className="flex items-center gap-2 mb-1">
+                              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                              <span className="text-xs text-slate-600 dark:text-slate-300">Ingesting Batch #9921...</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                              <div className="h-full bg-datova-500 w-[65%] animate-pulse"></div>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+
+              {/* Immutable Audit Logs */}
+              <div className="flex flex-col h-full">
+                  <div className="flex justify-between items-center mb-4">
+                      <h5 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                          <FileText size={16} className="text-datova-500"/> Immutable Audit Logs
+                      </h5>
+                      <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-2 py-0.5 rounded font-mono">EU AI Act Compliant</span>
+                  </div>
+                  
+                  <div className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden relative">
+                      <div className="absolute top-0 left-0 w-full h-full overflow-y-auto p-3 space-y-2 no-scrollbar">
+                          {mockWarehouseAudit.map((log) => (
+                              <div key={log.id} className="bg-white dark:bg-slate-900 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col gap-1">
+                                  <div className="flex justify-between items-center">
+                                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                                          log.status === 'Success' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                                          log.status === 'Warning' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
+                                          'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'
+                                      }`}>
+                                          {log.action}
+                                      </span>
+                                      <span className="text-[10px] text-slate-400 font-mono">{log.timestamp}</span>
+                                  </div>
+                                  <div className="text-xs text-slate-700 dark:text-slate-300 font-medium">
+                                      {log.source}: {log.details}
+                                  </div>
+                                  <div className="flex items-center gap-1 text-[9px] text-slate-400 font-mono mt-1 border-t border-slate-100 dark:border-slate-800 pt-1">
+                                      <Hash size={10} /> {log.hash}
+                                  </div>
+                              </div>
+                          ))}
+                      </div>
+                  </div>
+              </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-            <div>
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Validation</h5>
-                <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 size={16} className="text-emerald-500" />
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Schema Validated</span>
+      </FeatureCard>
+
+      {/* Enhanced Data Quality Score */}
+      <FeatureCard title="Granular Data Quality & Scoring" className="col-span-1 md:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1 flex flex-col items-center justify-center p-4">
+                <div className="relative h-40 w-40 flex items-center justify-center shrink-0">
+                    <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-slate-100 dark:text-slate-800" />
+                    <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-emerald-500" strokeDasharray={440} strokeDashoffset={440 - (440 * 0.92)} />
+                    </svg>
+                    <div className="absolute flex flex-col items-center">
+                        <span className="text-4xl font-bold text-slate-900 dark:text-white">92</span>
+                        <span className="text-xs text-slate-500 uppercase font-bold tracking-wider">Quality Index</span>
+                    </div>
                 </div>
-                <p className="text-xs text-slate-500">All incoming records match UBDM v2.4 definitions.</p>
-            </div>
-            <div>
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Uniqueness</h5>
-                <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 size={16} className="text-emerald-500" />
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Deduplicated</span>
+                <div className="text-center mt-4 space-y-1">
+                    <p className="text-sm font-bold text-slate-900 dark:text-white">High Trust Level</p>
+                    <p className="text-xs text-slate-500">Ready for Agentic Workflows</p>
                 </div>
-                <p className="text-xs text-slate-500">99.9% unique customer records identified.</p>
             </div>
-            <div>
-                <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Completeness</h5>
-                <div className="flex items-center gap-2 mb-1">
-                    <Activity size={16} className="text-amber-500" />
-                    <span className="text-sm font-bold text-slate-700 dark:text-slate-300">3 Anomalies</span>
-                </div>
-                <p className="text-xs text-slate-500">Missing 'Region' in 23 records from Legacy Sheets.</p>
+
+            <div className="lg:col-span-2 overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-800">
+                        <tr>
+                            <th className="px-4 py-3">Entity</th>
+                            <th className="px-4 py-3 text-center">Completeness</th>
+                            <th className="px-4 py-3 text-center">Accuracy</th>
+                            <th className="px-4 py-3 text-center">Consistency</th>
+                            <th className="px-4 py-3 text-right">Trend (7d)</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {mockEntityQuality.map((item, idx) => (
+                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                <td className="px-4 py-3 font-bold text-slate-700 dark:text-slate-300">{item.entity}</td>
+                                <td className="px-4 py-3 text-center">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${item.completeness > 90 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                        {item.completeness}%
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-center text-xs font-mono text-slate-600 dark:text-slate-400">{item.accuracy}%</td>
+                                <td className="px-4 py-3 text-center text-xs font-mono text-slate-600 dark:text-slate-400">{item.consistency}%</td>
+                                <td className="px-4 py-3 text-right">
+                                    <div className={`flex items-center justify-end gap-1 text-xs font-bold ${item.trend >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                        {item.trend > 0 ? <TrendingUp size={12}/> : item.trend < 0 ? <TrendingDown size={12}/> : null}
+                                        {item.trend > 0 ? '+' : ''}{item.trend}%
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
-          </div>
         </div>
       </FeatureCard>
     </div>
