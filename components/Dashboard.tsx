@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line, Legend, PieChart, Pie, Cell } from 'recharts';
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, BarChart, Bar, LineChart, Line, Legend, PieChart, Pie, Cell, Sankey } from 'recharts';
 import { 
   LayoutDashboard, Database, Zap, Shield, MessageSquare, User, 
   CheckCircle2, AlertCircle, Sparkles, Bot, FileText, Store, 
@@ -9,7 +9,7 @@ import {
   Play, Pause, MoreHorizontal, Cpu, Timer, History, XCircle, Key, Link,
   Brain, Sliders, ShieldCheck, TrendingUp, TrendingDown, Code2, Terminal, Siren, Construction, Lock,
   MousePointer2, Trash2, Move, Save, CornerDownRight, GitBranch, AlertTriangle, Plug, Scale, BookOpen, Eye, FileCheck,
-  Binary, Network, ToggleRight
+  Binary, Network, ToggleRight, Layers, Workflow, Fingerprint, ArrowUpRight
 } from 'lucide-react';
 import { chatWithData } from '../services/geminiService';
 import { DashboardTab, AssessmentData } from '../types';
@@ -72,47 +72,47 @@ const mockComplianceDocs = [
   { id: '4', name: 'Bias Audit Report', status: 'Ready', type: 'PDF', date: 'Oct 22, 2023' },
 ];
 
-const mockSchemaData: Record<string, { name: string; fields: { name: string; type: string; key: string }[] }[]> = {
-  ubdm: [
-    { name: 'Customers', fields: [
-        { name: 'customer_id', type: 'UUID', key: 'PK' },
-        { name: 'email', type: 'VARCHAR(255)', key: 'IDX' },
-        { name: 'tier_status', type: 'ENUM', key: '' },
-        { name: 'lifetime_val', type: 'DECIMAL', key: '' },
-        { name: 'created_at', type: 'TIMESTAMP', key: '' }
-    ]},
-    { name: 'Orders', fields: [
-        { name: 'order_id', type: 'UUID', key: 'PK' },
-        { name: 'customer_id', type: 'UUID', key: 'FK' },
-        { name: 'total_amount', type: 'DECIMAL', key: '' },
-        { name: 'currency', type: 'VARCHAR(3)', key: '' },
-        { name: 'status', type: 'VARCHAR(20)', key: '' }
-    ]},
-    { name: 'Interactions', fields: [
-        { name: 'event_id', type: 'UUID', key: 'PK' },
-        { name: 'customer_id', type: 'UUID', key: 'FK' },
-        { name: 'channel', type: 'VARCHAR(50)', key: '' },
-        { name: 'duration_sec', type: 'INT', key: '' },
-        { name: 'metadata', type: 'JSONB', key: '' }
-    ]}
-  ],
-  salesforce: [
-    { name: 'Lead', fields: [
-        { name: 'Id', type: 'ID', key: 'PK' }, 
-        { name: 'Email', type: 'STRING', key: 'IDX' }, 
-        { name: 'Status', type: 'PICKLIST', key: '' },
-        { name: 'Company', type: 'STRING', key: '' },
-        { name: 'LeadSource', type: 'PICKLIST', key: '' }
-    ]},
-    { name: 'Opportunity', fields: [
-        { name: 'Id', type: 'ID', key: 'PK' }, 
-        { name: 'AccountId', type: 'ID', key: 'FK' },
-        { name: 'Amount', type: 'CURRENCY', key: '' }, 
-        { name: 'StageName', type: 'PICKLIST', key: '' },
-        { name: 'CloseDate', type: 'DATE', key: '' }
-    ]}
-  ]
-};
+// Enhanced UBDM Data
+const mockUBDMEntities = [
+  { 
+    id: 'cust', 
+    name: 'Customer', 
+    type: 'Master',
+    description: 'A unique individual or organization purchasing goods. Golden record resolved from CRM, Support, and Marketing tools.',
+    fields: [
+      { name: 'customer_id', type: 'UUID', key: 'PK', origin: 'System', definition: 'Unique internal identifier (UBDM-ID)', lineage: 'Generated' },
+      { name: 'email', type: 'VARCHAR', key: 'IDX', origin: 'SFDC, HubSpot', definition: 'Primary contact email. Validated via Regex.', lineage: 'Coalesce(SFDC.Email, HubSpot.email)' },
+      { name: 'tier_status', type: 'ENUM', key: '', origin: 'Logic', definition: 'VIP if LTV > $5000', lineage: 'Computed' },
+      { name: 'lifetime_value', type: 'DECIMAL', key: '', origin: 'Calc', definition: 'Sum of all completed orders - refunds.', lineage: 'Agg(Orders.total)' },
+      { name: 'risk_score', type: 'FLOAT', key: '', origin: 'AI Model', definition: 'Churn probability 0-100.', lineage: 'Inference(ChurnModel_v2)' }
+    ],
+    identityStats: { resolved: 45200, duplicates: 1240, confidence: '99.2%' }
+  },
+  { 
+    id: 'ord', 
+    name: 'Transaction', 
+    type: 'Event',
+    description: 'An immutable exchange of value for goods or services.',
+    fields: [
+      { name: 'order_id', type: 'UUID', key: 'PK', origin: 'Shopify', definition: 'Original order ID', lineage: 'Shopify.id' },
+      { name: 'amount', type: 'DECIMAL', key: '', origin: 'Shopify', definition: 'Gross transaction value in USD.', lineage: 'Shopify.total_price' },
+      { name: 'status', type: 'ENUM', key: '', origin: 'Mapped', definition: 'Normalized: PENDING | PAID | FAILED', lineage: 'Map(Shopify.financial_status)' }
+    ],
+    identityStats: { resolved: 1200000, duplicates: 0, confidence: '100%' }
+  },
+  { 
+    id: 'agent', 
+    name: 'Agent_Action', 
+    type: 'System',
+    description: 'Log of autonomous actions taken by AI workers.',
+    fields: [
+      { name: 'action_id', type: 'UUID', key: 'PK', origin: 'System', definition: 'Log ID', lineage: 'Generated' },
+      { name: 'agent_name', type: 'VARCHAR', key: 'FK', origin: 'System', definition: 'Name of the agent', lineage: 'Context' },
+      { name: 'outcome', type: 'JSONB', key: '', origin: 'System', definition: 'Result payload', lineage: 'Output' }
+    ],
+    identityStats: { resolved: 85000, duplicates: 0, confidence: '100%' }
+  }
+];
 
 const dashboardContext = {
   ingestion: mockIngestionData,
@@ -224,7 +224,6 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
   const [connectStep, setConnectStep] = useState(1);
   const [selectedIntegration, setSelectedIntegration] = useState<any>(null);
   const [syncMode, setSyncMode] = useState<'webhook' | 'schedule'>('webhook');
-  const [activeSchemaModel, setActiveSchemaModel] = useState<'ubdm' | 'salesforce'>('ubdm');
   const [configForm, setConfigForm] = useState({
       name: '',
       apiKey: '',
@@ -254,15 +253,9 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
   // Intelligence Tab State
   const [showForecast, setShowForecast] = useState(false);
 
-  // Schema Explorer State
-  const [selectedSchemaTable, setSelectedSchemaTable] = useState<string | null>(null);
-  const [schemaSearch, setSchemaSearch] = useState('');
-
-  useEffect(() => {
-      if (mockSchemaData[activeSchemaModel]?.length > 0) {
-          setSelectedSchemaTable(mockSchemaData[activeSchemaModel][0].name);
-      }
-  }, [activeSchemaModel]);
+  // UBDM Architect State
+  const [selectedEntityId, setSelectedEntityId] = useState<string>(mockUBDMEntities[0].id);
+  const [ubdmViewMode, setUbdmViewMode] = useState<'schema' | 'lineage' | 'identity'>('schema');
 
   // Agent Fleet State
   const [agents, setAgents] = useState([
@@ -662,22 +655,22 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
                             <div className="space-y-3">
                                 <label className="block text-sm font-bold text-slate-700 dark:text-slate-300">Data Models</label>
                                 <div className="grid grid-cols-2 gap-3">
-                                    {mockSchemaData.ubdm.map((table) => (
-                                        <label key={table.name} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                    {mockUBDMEntities.map((entity) => (
+                                        <label key={entity.name} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                             <input 
                                                 type="checkbox" 
-                                                checked={agentConfig.models.includes(table.name)}
+                                                checked={agentConfig.models.includes(entity.name)}
                                                 onChange={(e) => {
                                                     const newModels = e.target.checked 
-                                                        ? [...agentConfig.models, table.name]
-                                                        : agentConfig.models.filter(m => m !== table.name);
+                                                        ? [...agentConfig.models, entity.name]
+                                                        : agentConfig.models.filter(m => m !== entity.name);
                                                     setAgentConfig({...agentConfig, models: newModels});
                                                 }}
                                                 className="w-4 h-4 rounded text-datova-500 focus:ring-datova-500 border-slate-300"
                                             />
                                             <div>
-                                                <span className="text-sm font-bold text-slate-900 dark:text-white block">{table.name}</span>
-                                                <span className="text-xs text-slate-500">{table.fields.length} fields</span>
+                                                <span className="text-sm font-bold text-slate-900 dark:text-white block">{entity.name}</span>
+                                                <span className="text-xs text-slate-500">{entity.fields.length} fields</span>
                                             </div>
                                         </label>
                                     ))}
@@ -1269,335 +1262,233 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
         </div>
       </FeatureCard>
 
-      {/* NEW MODULE: Data Cleaning & Standardization Studio */}
-      <FeatureCard title="Data Cleaning & Standardization Studio" className="col-span-1 md:col-span-2">
-           <div className="grid lg:grid-cols-3 gap-6">
-               
-               {/* Column 1: Pipeline Status & Controls */}
-               <div className="lg:col-span-1 space-y-4">
-                  <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-xl">
-                      <h5 className="font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
-                         <Wand2 size={16} className="text-datova-500" /> Auto-Normalization
-                      </h5>
-                      <div className="space-y-3">
-                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600 dark:text-slate-300">Naming Convention</span>
-                            <span className="font-mono text-xs bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">snake_case</span>
-                         </div>
-                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-slate-600 dark:text-slate-300">Date Format</span>
-                            <span className="font-mono text-xs bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">ISO-8601</span>
-                         </div>
-                         <div className="flex items-center justify-between text-sm">
-                             <span className="text-slate-600 dark:text-slate-300">Deduplication</span>
-                             <div className="flex items-center gap-1 text-emerald-500 font-bold text-xs">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                                </span>
-                                Active
-                             </div>
-                         </div>
-                      </div>
-                  </div>
-
-                  <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl">
-                      <h5 className="font-bold text-amber-800 dark:text-amber-200 mb-2 flex items-center gap-2 text-sm">
-                          <AlertOctagon size={16} /> Incoming Anomalies
-                      </h5>
-                      <div className="space-y-2">
-                          {mockAnomalies.map(a => (
-                              <div key={a.id} className="text-xs p-2 bg-white dark:bg-slate-900 rounded border border-amber-100 dark:border-amber-900/50 shadow-sm">
-                                  <div className="flex justify-between mb-1">
-                                      <span className="font-bold text-slate-700 dark:text-slate-300">{a.type}</span>
-                                      <span className="text-slate-400">{a.time}</span>
-                                  </div>
-                                  <p className="text-slate-600 dark:text-slate-400 leading-tight">{a.desc}</p>
-                              </div>
-                          ))}
-                      </div>
-                  </div>
-               </div>
-
-               {/* Column 2 & 3: Real-time Activity Log */}
-               <div className="lg:col-span-2">
-                  <div className="flex items-center justify-between mb-4">
-                      <h5 className="font-bold text-slate-900 dark:text-white text-sm">Live Transformation Log</h5>
-                      <div className="flex gap-2 text-xs">
-                          <span className="px-2 py-1 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 font-bold">Processed: 1.2M</span>
-                          <span className="px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold">Cleaned: 98%</span>
-                      </div>
-                  </div>
-                  <div className="overflow-hidden border border-slate-200 dark:border-slate-800 rounded-xl">
-                      <table className="w-full text-sm text-left">
-                          <thead className="bg-slate-50 dark:bg-slate-900/50 text-slate-500 font-medium border-b border-slate-200 dark:border-slate-800">
-                              <tr>
-                                  <th className="px-4 py-3">Field Detected</th>
-                                  <th className="px-4 py-3">Issue Type</th>
-                                  <th className="px-4 py-3">Automated Action</th>
-                                  <th className="px-4 py-3 text-right">Count</th>
-                              </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                              {mockCleaningLog.map((log, i) => (
-                                  <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                      <td className="px-4 py-3 font-mono text-xs text-slate-600 dark:text-slate-400">{log.field}</td>
-                                      <td className="px-4 py-3">
-                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                              log.issue.includes('Missing') ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400' :
-                                              log.issue.includes('Type') ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' :
-                                              'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                          }`}>
-                                              {log.issue}
-                                          </span>
-                                      </td>
-                                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300 flex items-center gap-1">
-                                          <ArrowRight size={12} className="text-slate-400" /> {log.action}
-                                      </td>
-                                      <td className="px-4 py-3 text-right font-mono text-slate-500">{log.count}</td>
-                                  </tr>
-                              ))}
-                          </tbody>
-                      </table>
-                  </div>
-               </div>
-           </div>
-       </FeatureCard>
-
-       {/* NEW: Data Validation & Quality Rules */}
-       <FeatureCard title="Data Validation & Quality Rules" className="col-span-1 md:col-span-2">
-           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Rules List */}
-              <div>
-                 <div className="flex justify-between items-center mb-4">
-                    <h5 className="font-bold text-slate-900 dark:text-white text-sm">Active Rules</h5>
-                    <button onClick={() => setShowRuleForm(!showRuleForm)} className="text-xs flex items-center gap-1 bg-datova-500 text-white px-3 py-1.5 rounded-lg font-bold hover:bg-datova-600 transition shadow-sm">
-                       <Plus size={14} /> Add Rule
-                    </button>
-                 </div>
-                 
-                 {/* New Rule Form */}
-                 {showRuleForm && (
-                    <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-xl mb-4 text-xs animate-fade-in border border-slate-200 dark:border-slate-700">
-                       <div className="grid grid-cols-2 gap-3 mb-3">
-                           <div>
-                               <label className="block text-slate-500 mb-1">Rule Name</label>
-                               <input type="text" className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white" value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})} placeholder="e.g. Email Check" />
-                           </div>
-                           <div>
-                               <label className="block text-slate-500 mb-1">Field</label>
-                               <input type="text" className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white" value={newRule.field} onChange={e => setNewRule({...newRule, field: e.target.value})} placeholder="e.g. email" />
-                           </div>
-                           <div>
-                               <label className="block text-slate-500 mb-1">Condition</label>
-                               <select className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white" value={newRule.condition} onChange={e => setNewRule({...newRule, condition: e.target.value})}>
-                                   <option>Equals</option>
-                                   <option>Greater Than</option>
-                                   <option>Less Than</option>
-                                   <option>Regex Match</option>
-                               </select>
-                           </div>
-                           <div>
-                               <label className="block text-slate-500 mb-1">Value</label>
-                               <input type="text" className="w-full p-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900 dark:text-white" value={newRule.value} onChange={e => setNewRule({...newRule, value: e.target.value})} placeholder="Value" />
-                           </div>
-                       </div>
-                       <div className="flex justify-end gap-2">
-                           <button onClick={() => setShowRuleForm(false)} className="px-3 py-1.5 text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">Cancel</button>
-                           <button onClick={handleAddRule} className="px-3 py-1.5 bg-datova-500 text-white rounded-lg font-bold hover:bg-datova-600">Save Rule</button>
-                       </div>
-                    </div>
-                 )}
-
-                 <div className="space-y-2 max-h-64 overflow-y-auto pr-2">
-                    {validationRules.map(rule => (
-                       <div key={rule.id} className="flex items-center justify-between p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl transition-all hover:border-datova-300 dark:hover:border-datova-700">
-                          <div>
-                             <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">{rule.name}</div>
-                             <div className="text-[10px] text-slate-500 font-mono mt-0.5">
-                                <span className="text-indigo-500">{rule.field}</span> <span className="text-slate-400">{rule.condition}</span> <span className="text-emerald-600 dark:text-emerald-400">{rule.value}</span>
-                             </div>
-                          </div>
-                          <div onClick={() => toggleRule(rule.id)} className={`w-9 h-5 rounded-full p-0.5 cursor-pointer transition-colors ${rule.active ? 'bg-datova-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
-                             <div className={`w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${rule.active ? 'translate-x-4' : 'translate-x-0'}`}></div>
-                          </div>
-                       </div>
-                    ))}
-                 </div>
-              </div>
-
-              {/* Real-time Alerts */}
-              <div>
-                 <h5 className="font-bold text-slate-900 dark:text-white text-sm mb-4 flex items-center gap-2">
-                    <Siren size={16} className="text-rose-500 animate-pulse" /> Real-time Quality Alerts
-                 </h5>
-                 <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                    {validationAlerts.map(alert => (
-                       <div key={alert.id} className="flex gap-3 p-3 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl">
-                          <div className="mt-0.5 p-1 bg-white dark:bg-rose-950 rounded-full h-fit"><XCircle size={14} className="text-rose-500"/></div>
-                          <div className="flex-1">
-                             <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-slate-900 dark:text-white text-xs font-mono">{alert.field}</span>
-                                <span className="text-[10px] text-slate-400">{alert.time}</span>
-                             </div>
-                             <p className="text-xs text-rose-700 dark:text-rose-300 leading-tight mb-2">{alert.error}</p>
-                             <span className={`inline-block text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                                 alert.status === 'Blocked' 
-                                 ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/40 dark:text-rose-300 dark:border-rose-800' 
-                                 : 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-800'
-                             }`}>
-                                {alert.status}
-                             </span>
-                          </div>
-                       </div>
-                    ))}
-                    <div className="text-center pt-2">
-                        <span className="text-[10px] text-slate-400 flex items-center justify-center gap-1">
-                            <Activity size={10} /> Live Monitoring Active
-                        </span>
-                    </div>
-                 </div>
-              </div>
-           </div>
-       </FeatureCard>
-
-      {/* NEW: Visual Schema Explorer (Upgraded) */}
-      <FeatureCard title="Visual Schema Explorer" className="col-span-1 md:col-span-2" action={
+      {/* NEW: Unified Business Data Model (UBDM) Studio */}
+      <FeatureCard title="Unified Business Data Model (UBDM) Studio" className="col-span-1 md:col-span-2" action={
        <div className="flex gap-2">
-          <button 
-            onClick={() => setActiveSchemaModel('ubdm')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeSchemaModel === 'ubdm' 
-                ? 'bg-datova-500 text-white shadow-md shadow-datova-500/20' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            UBDM Core (Target)
-          </button>
-          <button 
-            onClick={() => setActiveSchemaModel('salesforce')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                activeSchemaModel === 'salesforce' 
-                ? 'bg-blue-500 text-white shadow-md shadow-blue-500/20' 
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            Salesforce (Source)
-          </button>
+          <button onClick={() => setUbdmViewMode('schema')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'schema' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Schema View"><Layers size={16}/></button>
+          <button onClick={() => setUbdmViewMode('lineage')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'lineage' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Lineage View"><Workflow size={16}/></button>
+          <button onClick={() => setUbdmViewMode('identity')} className={`p-2 rounded-lg transition-all ${ubdmViewMode === 'identity' ? 'bg-datova-500 text-white' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`} title="Identity Resolution"><Fingerprint size={16}/></button>
        </div>
       }>
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col md:flex-row h-[500px]">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden flex flex-col md:flex-row h-[600px]">
             {/* Sidebar List */}
-            <div className="w-full md:w-1/3 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex flex-col">
+            <div className="w-full md:w-64 border-r border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/50 flex flex-col shrink-0">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                    <h5 className="text-xs font-bold uppercase text-slate-400 mb-2">Canonical Entities</h5>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                         <input 
                             type="text" 
                             placeholder="Search entities..." 
-                            value={schemaSearch}
-                            onChange={(e) => setSchemaSearch(e.target.value)}
                             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white"
                         />
                     </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-2 space-y-1">
-                    {mockSchemaData[activeSchemaModel]
-                        .filter(t => t.name.toLowerCase().includes(schemaSearch.toLowerCase()))
-                        .map((table) => (
+                    {mockUBDMEntities.map((entity) => (
                         <button
-                            key={table.name}
-                            onClick={() => setSelectedSchemaTable(table.name)}
-                            className={`w-full flex items-center justify-between p-3 rounded-lg text-sm transition-all ${
-                                selectedSchemaTable === table.name
-                                ? 'bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700 text-datova-600 dark:text-datova-400 font-bold'
-                                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50'
+                            key={entity.id}
+                            onClick={() => setSelectedEntityId(entity.id)}
+                            className={`w-full flex items-center gap-3 p-3 rounded-lg text-sm transition-all text-left group ${
+                                selectedEntityId === entity.id
+                                ? 'bg-white dark:bg-slate-800 shadow-md border border-slate-200 dark:border-slate-700'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-800/50'
                             }`}
                         >
-                            <div className="flex items-center gap-2">
-                                <Database size={14} className={selectedSchemaTable === table.name ? 'text-datova-500' : 'text-slate-400'} />
-                                {table.name}
+                            <div className={`p-2 rounded-lg ${selectedEntityId === entity.id ? 'bg-datova-100 text-datova-600 dark:bg-datova-900/30 dark:text-datova-400' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'}`}>
+                                {entity.type === 'Master' ? <User size={16}/> : entity.type === 'Event' ? <Activity size={16}/> : <Bot size={16}/>}
                             </div>
-                            <span className="text-[10px] bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded text-slate-400">
-                                {table.fields.length}
-                            </span>
+                            <div>
+                                <div className={`font-bold ${selectedEntityId === entity.id ? 'text-slate-900 dark:text-white' : 'text-slate-600 dark:text-slate-400'}`}>{entity.name}</div>
+                                <div className="text-[10px] text-slate-400">{entity.fields.length} Fields • {entity.identityStats.confidence}</div>
+                            </div>
                         </button>
                     ))}
+                    
+                    <button className="w-full flex items-center justify-center gap-2 p-3 mt-2 border border-dashed border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                        <Plus size={14} /> New Entity
+                    </button>
                 </div>
             </div>
 
-            {/* Details Pane */}
-            <div className="flex-1 flex flex-col bg-white dark:bg-slate-900">
-                {selectedSchemaTable && (() => {
-                    const table = mockSchemaData[activeSchemaModel].find(t => t.name === selectedSchemaTable);
-                    if (!table) return null;
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+                {selectedEntityId && (() => {
+                    const entity = mockUBDMEntities.find(e => e.id === selectedEntityId);
+                    if (!entity) return null;
+
                     return (
                         <>
-                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start">
+                            {/* Entity Header */}
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-start bg-white dark:bg-slate-900 z-10">
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                                        {table.name}
-                                        <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-normal text-slate-500 border border-slate-200 dark:border-slate-700">Table</span>
-                                    </h3>
-                                    <p className="text-xs text-slate-500 mt-1">
-                                        {activeSchemaModel === 'ubdm' 
-                                            ? 'Canonical entity for business domain.' 
-                                            : 'Raw ingestion table from source system.'}
-                                    </p>
+                                    <div className="flex items-center gap-3 mb-1">
+                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">{entity.name}</h3>
+                                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 text-[10px] font-bold uppercase border border-indigo-100 dark:border-indigo-800">{entity.type} Entity</span>
+                                    </div>
+                                    <p className="text-sm text-slate-500 max-w-xl">{entity.description}</p>
                                 </div>
                                 <div className="flex gap-2">
-                                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors" title="View Data Sample">
-                                        <FileText size={16} />
+                                    <button className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all">
+                                        <Code2 size={14}/> Export JSON
                                     </button>
-                                    <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 transition-colors" title="Settings">
-                                        <Settings size={16} />
+                                    <button className="flex items-center gap-2 px-3 py-1.5 bg-datova-500 hover:bg-datova-600 rounded-lg text-xs font-bold text-white shadow-lg shadow-datova-500/20 transition-all">
+                                        <Settings size={14}/> Edit Schema
                                     </button>
                                 </div>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-0">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0">
-                                        <tr>
-                                            <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Field Name</th>
-                                            <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Data Type</th>
-                                            <th className="px-6 py-3 font-medium text-xs uppercase tracking-wider">Attributes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                        {table.fields.map((field, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
-                                                <td className="px-6 py-3 font-mono text-xs text-slate-700 dark:text-slate-300 font-medium">
-                                                    {field.name}
-                                                </td>
-                                                <td className="px-6 py-3 text-slate-500 text-xs">
-                                                    <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">
-                                                        {field.type}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-3">
-                                                    <div className="flex gap-2">
-                                                        {field.key === 'PK' && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                                                                <Key size={10} /> PK
-                                                            </span>
-                                                        )}
-                                                        {field.key === 'FK' && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                                                                <Link size={10} /> FK
-                                                            </span>
-                                                        )}
-                                                        {field.key === 'IDX' && (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                                                <Search size={10} /> IDX
-                                                            </span>
-                                                        )}
-                                                        {!field.key && <span className="text-slate-300 dark:text-slate-600 text-[10px]">-</span>}
-                                                    </div>
-                                                </td>
+
+                            {/* View Content */}
+                            <div className="flex-1 overflow-y-auto p-0 relative">
+                                {ubdmViewMode === 'schema' && (
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="bg-slate-50 dark:bg-slate-950/50 text-slate-500 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Field Name</th>
+                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Type</th>
+                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Origin / Lineage</th>
+                                                <th className="px-6 py-3 font-bold text-xs uppercase tracking-wider">Business Definition (Semantic)</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                            {entity.fields.map((field, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-2 font-mono text-xs font-bold text-slate-700 dark:text-slate-200">
+                                                            {field.key === 'PK' && <Key size={12} className="text-amber-500" />}
+                                                            {field.key === 'FK' && <Link size={12} className="text-indigo-500" />}
+                                                            {field.key === 'IDX' && <Search size={12} className="text-emerald-500" />}
+                                                            {field.name}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs">
+                                                        <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 font-mono text-slate-600 dark:text-slate-400">
+                                                            {field.type}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex flex-col gap-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{field.origin}</span>
+                                                                {field.lineage && <span className="text-[10px] bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 px-1.5 rounded border border-indigo-100 dark:border-indigo-800">Mapped</span>}
+                                                            </div>
+                                                            <div className="text-[10px] text-slate-400 font-mono">{field.lineage}</div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                                        {field.definition}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+
+                                {ubdmViewMode === 'lineage' && (
+                                    <div className="p-8 h-full flex flex-col items-center justify-center bg-slate-50/50 dark:bg-slate-900/50">
+                                        <div className="flex items-center gap-8 relative">
+                                            {/* Source Systems */}
+                                            <div className="space-y-4">
+                                                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm w-48">
+                                                    <div className="flex items-center gap-2 mb-2 font-bold text-slate-900 dark:text-white"><Cloud size={16}/> Salesforce</div>
+                                                    <div className="text-xs text-slate-500">Lead.Email</div>
+                                                </div>
+                                                <div className="p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-sm w-48">
+                                                    <div className="flex items-center gap-2 mb-2 font-bold text-slate-900 dark:text-white"><Database size={16}/> HubSpot</div>
+                                                    <div className="text-xs text-slate-500">Contact.email</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Transformation */}
+                                            <div className="relative">
+                                                <div className="absolute top-1/2 -left-8 w-8 h-0.5 bg-slate-300 dark:bg-slate-600"></div>
+                                                <div className="p-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-full shadow-sm z-10 relative">
+                                                    <GitMerge size={24} className="text-indigo-600 dark:text-indigo-400" />
+                                                </div>
+                                                <div className="absolute top-1/2 -right-8 w-8 h-0.5 bg-slate-300 dark:bg-slate-600"></div>
+                                                <div className="absolute top-10 left-1/2 -translate-x-1/2 text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">Coalesce & Validate</div>
+                                            </div>
+
+                                            {/* UBDM Entity */}
+                                            <div className="p-6 bg-white dark:bg-slate-800 border-2 border-datova-500 rounded-2xl shadow-xl w-64">
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="p-2 bg-datova-100 dark:bg-datova-900/30 rounded-lg text-datova-600">
+                                                        {entity.type === 'Master' ? <User size={20}/> : <Activity size={20}/>}
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-lg text-slate-900 dark:text-white">{entity.name}</div>
+                                                        <div className="text-[10px] text-slate-400 font-bold uppercase">Canonical Entity</div>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {entity.fields.slice(0,3).map(f => (
+                                                        <div key={f.name} className="flex justify-between text-xs p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800">
+                                                            <span className="font-mono font-bold text-slate-700 dark:text-slate-300">{f.name}</span>
+                                                            <span className="text-slate-400">{f.type}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {ubdmViewMode === 'identity' && (
+                                    <div className="p-8 h-full">
+                                        <div className="grid grid-cols-3 gap-6 mb-8">
+                                            <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30 rounded-xl text-center">
+                                                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-1">{entity.identityStats.resolved.toLocaleString()}</div>
+                                                <div className="text-xs font-bold text-emerald-700/60 dark:text-emerald-300/60 uppercase tracking-wider">Unique Identities</div>
+                                            </div>
+                                            <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/30 rounded-xl text-center">
+                                                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400 mb-1">{entity.identityStats.duplicates.toLocaleString()}</div>
+                                                <div className="text-xs font-bold text-amber-700/60 dark:text-amber-300/60 uppercase tracking-wider">Duplicates Merged</div>
+                                            </div>
+                                            <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 rounded-xl text-center">
+                                                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-1">{entity.identityStats.confidence}</div>
+                                                <div className="text-xs font-bold text-blue-700/60 dark:text-blue-300/60 uppercase tracking-wider">Match Confidence</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6">
+                                            <h5 className="font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                                                <Fingerprint size={18} className="text-datova-500"/> Golden Record Generation
+                                            </h5>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300">JD</div>
+                                                        <div>
+                                                            <div className="font-bold text-sm text-slate-900 dark:text-white">John Doe</div>
+                                                            <div className="text-xs text-slate-500">3 Source Records Merged</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-[10px] text-slate-500">SFDC: 003...</div>
+                                                        <ArrowRight size={12} className="text-slate-300"/>
+                                                        <div className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-[10px] text-slate-500">HubSpot: 992...</div>
+                                                        <ArrowRight size={12} className="text-slate-300"/>
+                                                        <div className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-bold">UBDM: u-10293</div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center justify-between p-3 border border-slate-100 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center font-bold text-xs text-slate-600 dark:text-slate-300">AS</div>
+                                                        <div>
+                                                            <div className="font-bold text-sm text-slate-900 dark:text-white">Alice Smith</div>
+                                                            <div className="text-xs text-slate-500">2 Source Records Merged</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="px-2 py-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded text-[10px] text-slate-500">Shopify: 882...</div>
+                                                        <ArrowRight size={12} className="text-slate-300"/>
+                                                        <div className="px-2 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded text-[10px] font-bold">UBDM: u-44912</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </>
                     );
@@ -1607,6 +1498,7 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
       </FeatureCard>
 
       <FeatureCard title="Data Quality Score" className="col-span-1 md:col-span-2">
+        {/* ... (Existing Data Quality Score code remains same) ... */}
         <div className="flex flex-col md:flex-row items-center gap-6 md:gap-12 p-2">
           <div className="relative h-32 w-32 flex items-center justify-center shrink-0">
             <svg className="w-full h-full transform -rotate-90">
@@ -1842,430 +1734,324 @@ const Dashboard: React.FC<DashboardProps> = ({ data, onBack }) => {
   );
 
   const renderAutomationTab = () => (
-    <div className="animate-fade-in h-full flex flex-col gap-6">
-       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-           {agents.map((agent, i) => (
-               <div key={i} className="bg-white dark:bg-slate-850 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center gap-4">
-                   <div className={`p-3 rounded-xl ${agent.status === 'busy' ? 'bg-amber-100 text-amber-600' : agent.status === 'offline' ? 'bg-slate-100 text-slate-400' : 'bg-emerald-100 text-emerald-600'}`}>
-                       {agent.role === 'Governance' ? <ShieldCheck size={20} /> : <Bot size={20} />}
-                   </div>
-                   <div>
-                       <div className="font-bold text-sm text-slate-900 dark:text-white">{agent.name}</div>
-                       <div className="text-xs text-slate-500">{agent.role}</div>
-                   </div>
-                   <div className="ml-auto text-xs font-bold text-slate-400">{agent.load}%</div>
-               </div>
-           ))}
-           <button onClick={handleOpenAgentModal} className="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col items-center justify-center text-slate-400 hover:text-datova-500 hover:border-datova-300 transition-colors p-4">
-               <Plus size={24} className="mb-1" />
-               <span className="text-xs font-bold">Deploy Agent</span>
-           </button>
-       </div>
+    <div className="animate-fade-in space-y-6 h-full pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FeatureCard title="Active Agent Fleet" action={
+                <button onClick={handleOpenAgentModal} className="text-xs bg-datova-500 text-white hover:bg-datova-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-all shadow-md shadow-datova-500/20">
+                    <Plus size={14} /> Deploy Agent
+                </button>
+            }>
+                <div className="space-y-4">
+                     {agents.map((agent, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:shadow-md transition-all">
+                            <div className="flex items-center gap-4">
+                                <div className={`p-3 rounded-full ${
+                                    agent.status === 'busy' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 
+                                    agent.status === 'active' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' : 
+                                    'bg-slate-100 text-slate-500 dark:bg-slate-800'
+                                }`}>
+                                    <Bot size={20} />
+                                </div>
+                                <div>
+                                    <div className="font-bold text-slate-900 dark:text-white">{agent.name}</div>
+                                    <div className="text-xs text-slate-500">{agent.role} • Load: {agent.load}%</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <div className="text-right hidden sm:block">
+                                    <div className="text-xs font-bold text-slate-900 dark:text-white">{agent.status === 'busy' ? 'Processing Task #922' : 'Waiting for triggers'}</div>
+                                    <div className="text-[10px] text-slate-500">Uptime: 4d 12h</div>
+                                </div>
+                                <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400">
+                                    <MoreHorizontal size={16}/>
+                                </button>
+                            </div>
+                        </div>
+                     ))}
+                </div>
+            </FeatureCard>
 
-       <div className="flex-1 bg-slate-100 dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 relative overflow-hidden flex flex-col md:flex-row">
-           {/* Canvas Sidebar */}
-           <div className="w-full md:w-48 bg-white dark:bg-slate-850 border-r border-slate-200 dark:border-slate-800 p-4 z-10">
-               <h5 className="text-xs font-bold uppercase text-slate-400 mb-4">Workflow Nodes</h5>
-               <div className="space-y-2">
-                   {['trigger', 'action', 'decision', 'agent', 'db'].map(type => (
-                       <div 
-                           key={type}
-                           draggable
-                           onDragStart={(e) => handleDragStart(e, type as any, type.charAt(0).toUpperCase() + type.slice(1))}
-                           className="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl cursor-move hover:shadow-md transition-shadow flex items-center gap-2 text-sm font-bold text-slate-600 dark:text-slate-300"
-                       >
-                           <div className={`w-2 h-2 rounded-full ${
-                               type === 'trigger' ? 'bg-emerald-500' : 
-                               type === 'decision' ? 'bg-amber-500' : 
-                               type === 'agent' ? 'bg-indigo-500' : 'bg-slate-500'
-                           }`}></div>
-                           {type.charAt(0).toUpperCase() + type.slice(1)}
-                       </div>
-                   ))}
-               </div>
-               <div className="mt-8">
-                   <p className="text-xs text-slate-400 text-center">Drag nodes to canvas</p>
-               </div>
-           </div>
-
-           {/* Canvas Area */}
-           <div 
-               ref={canvasRef}
-               className="flex-1 relative bg-grid-slate-200 dark:bg-grid-slate-800/20"
-               onDrop={handleDrop}
-               onDragOver={e => e.preventDefault()}
-               onClick={() => { setSelectedNodeId(null); setLinkingSourceId(null); }}
-           >
-               {/* Edges Layer */}
-               <svg className="absolute inset-0 pointer-events-none overflow-visible w-full h-full z-0">
-                   {workflowEdges.map(edge => {
-                       const source = workflowNodes.find(n => n.id === edge.source);
-                       const target = workflowNodes.find(n => n.id === edge.target);
-                       if(!source || !target) return null;
-                       return (
-                           <g key={edge.id}>
-                               <path 
-                                   d={`M ${source.x + 160} ${source.y + 28} C ${source.x + 200} ${source.y + 28}, ${target.x - 40} ${target.y + 28}, ${target.x} ${target.y + 28}`} 
-                                   stroke="#94a3b8" 
-                                   strokeWidth="2" 
-                                   fill="none" 
-                               />
-                               {edge.label && (
-                                   <text x={(source.x + target.x)/2 + 60} y={(source.y + target.y)/2 + 20} className="text-xs fill-slate-500 font-bold bg-white">{edge.label}</text>
-                               )}
-                           </g>
-                       )
-                   })}
-                   {linkingSourceId && (
-                       <defs>
-                           <marker id="arrow" markerWidth="10" markerHeight="10" refX="0" refY="3" orient="auto" markerUnits="strokeWidth">
-                               <path d="M0,0 L0,6 L9,3 z" fill="#cbd5e1" />
-                           </marker>
-                       </defs>
-                   )}
-               </svg>
-
-               {/* Nodes Layer */}
-               {workflowNodes.map(node => (
-                   <div 
-                       key={node.id}
-                       style={{ left: node.x, top: node.y }}
-                       className={`absolute w-40 bg-white dark:bg-slate-800 p-3 rounded-xl border-2 shadow-lg cursor-grab active:cursor-grabbing z-10 group ${
-                           selectedNodeId === node.id ? 'border-datova-500 ring-2 ring-datova-500/20' : 'border-slate-200 dark:border-slate-700'
-                       }`}
-                       onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
-                   >
-                       <div className="flex items-center gap-2 mb-1">
-                           <div className={`p-1.5 rounded-lg text-white ${
-                               node.type === 'trigger' ? 'bg-emerald-500' : 
-                               node.type === 'decision' ? 'bg-amber-500' : 
-                               node.type === 'agent' ? 'bg-indigo-500' : 'bg-slate-500'
-                           }`}>
-                               {node.type === 'agent' ? <Bot size={12}/> : <Activity size={12}/>}
-                           </div>
-                           <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">{node.type}</span>
-                       </div>
-                       <div className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{node.label}</div>
-
-                       {/* Connector Handle */}
-                       <div 
-                           className={`absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-full flex items-center justify-center cursor-crosshair hover:scale-110 hover:border-datova-500 transition-all ${linkingSourceId === node.id ? 'bg-datova-500 border-datova-500' : ''}`}
-                           onClick={(e) => startLinking(e, node.id)}
-                           title="Link Node"
-                       >
-                           <Plus size={10} className={linkingSourceId === node.id ? 'text-white' : 'text-slate-400'} />
-                       </div>
-                       
-                       {selectedNodeId === node.id && (
-                           <button onClick={deleteSelected} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow-md hover:scale-110 transition-transform">
-                               <X size={10} />
-                           </button>
-                       )}
-                   </div>
-               ))}
-           </div>
-       </div>
+            <FeatureCard title="Predictive Workflows">
+                 <div className="h-64 flex items-center justify-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-900/50 relative overflow-hidden group">
+                     {/* Simplified Workflow Viz using nodes state */}
+                     <div className="absolute inset-0 p-4" ref={canvasRef} onDrop={handleDrop} onDragOver={e => e.preventDefault()}>
+                        <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                            {workflowEdges.map(edge => {
+                                const source = workflowNodes.find(n => n.id === edge.source);
+                                const target = workflowNodes.find(n => n.id === edge.target);
+                                if (!source || !target) return null;
+                                return (
+                                    <line 
+                                        key={edge.id} 
+                                        x1={source.x + 80} y1={source.y + 30} 
+                                        x2={target.x + 80} y2={target.y + 30} 
+                                        stroke="#94a3b8" 
+                                        strokeWidth="2" 
+                                    />
+                                );
+                            })}
+                        </svg>
+                        {workflowNodes.map(node => (
+                            <div 
+                                key={node.id}
+                                style={{ left: node.x, top: node.y }}
+                                onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                                onClick={(e) => startLinking(e, node.id)}
+                                className={`absolute w-40 p-3 rounded-xl border shadow-sm z-10 cursor-move transition-colors flex items-center gap-2 ${
+                                    selectedNodeId === node.id ? 'border-datova-500 ring-2 ring-datova-500/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
+                                }`}
+                            >
+                                <div className={`p-1.5 rounded-lg ${
+                                    node.type === 'trigger' ? 'bg-amber-100 text-amber-600' :
+                                    node.type === 'action' ? 'bg-blue-100 text-blue-600' :
+                                    node.type === 'agent' ? 'bg-purple-100 text-purple-600' :
+                                    'bg-slate-100 text-slate-500'
+                                }`}>
+                                    {node.type === 'trigger' ? <Zap size={14}/> : node.type === 'agent' ? <Bot size={14}/> : <Activity size={14}/>}
+                                </div>
+                                <span className="text-xs font-bold truncate select-none text-slate-700 dark:text-slate-200">{node.label}</span>
+                            </div>
+                        ))}
+                     </div>
+                     <div className="absolute bottom-4 right-4 flex gap-2">
+                        <div className="text-[10px] text-slate-400 bg-white dark:bg-slate-800 px-2 py-1 rounded shadow-sm border border-slate-200 dark:border-slate-700">
+                             Drag to move • Click to link
+                        </div>
+                     </div>
+                 </div>
+            </FeatureCard>
+        </div>
     </div>
   );
 
   const renderGovernanceTab = () => (
-    <div className="animate-fade-in space-y-6 h-full pb-6">
-        {/* Top KPI Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Compliance Score</span>
-                    <span className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg"><Scale size={16} /></span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">92%</div>
-                <div className="text-[10px] text-slate-400 mt-1">Ready for EU AI Act</div>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Risk Assessment</span>
-                    <span className="p-1.5 bg-amber-100 text-amber-600 rounded-lg"><AlertTriangle size={16} /></span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">2 High</div>
-                <div className="text-[10px] text-slate-400 mt-1">System Tiers Identified</div>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Docs Generated</span>
-                    <span className="p-1.5 bg-blue-100 text-blue-600 rounded-lg"><FileText size={16} /></span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">14/16</div>
-                <div className="text-[10px] text-slate-400 mt-1">Audit-ready artifacts</div>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
-                <div className="flex justify-between items-start">
-                    <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Human Oversight</span>
-                    <span className="p-1.5 bg-purple-100 text-purple-600 rounded-lg"><Eye size={16} /></span>
-                </div>
-                <div className="text-2xl font-bold text-slate-900 dark:text-white mt-2">Active</div>
-                <div className="text-[10px] text-slate-400 mt-1">Post-market monitoring</div>
-            </div>
-        </div>
-
+      <div className="animate-fade-in space-y-6 h-full pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Risk Assessment Tools */}
-            <FeatureCard title="EU AI Act Risk Classification" className="lg:col-span-1">
-                <div className="h-64 relative flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={mockGovernanceRisks}
-                                innerRadius={60}
-                                outerRadius={80}
-                                paddingAngle={5}
-                                dataKey="value"
-                            >
-                                {mockGovernanceRisks.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} strokeWidth={0} />
-                                ))}
-                            </Pie>
-                            <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                            <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px' }}/>
-                        </PieChart>
-                    </ResponsiveContainer>
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center -mt-4">
-                        <div className="text-3xl font-bold text-slate-900 dark:text-white">19</div>
-                        <div className="text-[10px] text-slate-400 uppercase font-bold">Systems</div>
-                    </div>
-                </div>
-                <div className="mt-4 p-3 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-xl flex gap-3 items-start">
-                    <AlertTriangle className="text-rose-500 shrink-0 mt-0.5" size={16} />
-                    <div>
-                        <div className="text-xs font-bold text-rose-700 dark:text-rose-300">Action Required</div>
-                        <p className="text-[10px] text-rose-600 dark:text-rose-400 mt-1">2 systems flagged as "High Risk" require immediate Conformity Assessment updates.</p>
-                    </div>
+            <FeatureCard title="Validation Rules" className="lg:col-span-2" action={
+                <button onClick={() => setShowRuleForm(true)} className="text-xs font-bold text-datova-600 dark:text-datova-400 hover:underline flex items-center gap-1">
+                    <Plus size={14}/> Add Rule
+                </button>
+            }>
+                <div className="space-y-3">
+                    {validationRules.map(rule => (
+                        <div key={rule.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <button onClick={() => toggleRule(rule.id)} className={`text-2xl ${rule.active ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                    {rule.active ? <ToggleRight /> : <ToggleRight className="rotate-180" />}
+                                </button>
+                                <div>
+                                    <div className="font-bold text-sm text-slate-900 dark:text-white">{rule.name}</div>
+                                    <div className="text-xs text-slate-500 font-mono">{rule.field} {rule.condition} "{rule.value}"</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <div className="text-xs font-bold text-slate-700 dark:text-slate-300">98.5% Pass</div>
+                                    <div className="text-[10px] text-slate-400">Last 24h</div>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    {showRuleForm && (
+                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3 animate-fade-in">
+                            <input 
+                                placeholder="Rule Name" 
+                                className="w-full p-2 text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"
+                                value={newRule.name} onChange={e => setNewRule({...newRule, name: e.target.value})}
+                            />
+                            <div className="flex gap-2">
+                                <input 
+                                    placeholder="Field (e.g. email)" 
+                                    className="flex-1 p-2 text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white"
+                                    value={newRule.field} onChange={e => setNewRule({...newRule, field: e.target.value})}
+                                />
+                                <select className="p-2 text-sm rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 dark:text-white">
+                                    <option>Equals</option><option>Regex Match</option><option>Greater Than</option>
+                                </select>
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <button onClick={() => setShowRuleForm(false)} className="px-3 py-1.5 text-xs font-bold text-slate-500">Cancel</button>
+                                <button onClick={handleAddRule} className="px-3 py-1.5 text-xs font-bold bg-datova-500 text-white rounded">Save Rule</button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </FeatureCard>
 
-            {/* Compliance Documentation */}
-            <FeatureCard title="Automated Compliance Docs" className="lg:col-span-2">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                        <thead>
-                            <tr className="text-slate-400 border-b border-slate-200 dark:border-slate-800">
-                                <th className="pb-3 font-medium">Document Name</th>
-                                <th className="pb-3 font-medium">Status</th>
-                                <th className="pb-3 font-medium">Last Updated</th>
-                                <th className="pb-3 font-medium text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {mockComplianceDocs.map((doc) => (
-                                <tr key={doc.id} className="group hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                    <td className="py-3 font-medium text-slate-900 dark:text-white flex items-center gap-2">
-                                        <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500">
-                                            {doc.type === 'PDF' ? <FileText size={14} /> : <FileCheck size={14} />}
-                                        </div>
-                                        {doc.name}
-                                    </td>
-                                    <td className="py-3">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                                            doc.status === 'Ready' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30' :
-                                            doc.status === 'Review' ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' :
-                                            'bg-slate-100 text-slate-500 dark:bg-slate-800'
-                                        }`}>
-                                            {doc.status}
-                                        </span>
-                                    </td>
-                                    <td className="py-3 text-slate-500 text-xs">{doc.date}</td>
-                                    <td className="py-3 text-right">
-                                        <button className="text-xs font-bold text-datova-500 hover:underline">Download</button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="mt-4 flex gap-2">
-                    <button 
-                        onClick={() => {
-                            setComplianceStep(1);
-                            setShowComplianceModal(true);
-                        }}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-xs font-bold shadow-sm hover:opacity-90 transition-opacity"
-                    >
-                        <RefreshCw size={14} /> Generate All Artifacts
-                    </button>
-                </div>
-            </FeatureCard>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Post-Market Monitoring */}
-            <FeatureCard title="Post-Market Monitoring & Oversight">
-                <div className="space-y-4">
-                    <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Model Accuracy Drift</span>
-                                <span className="text-xs font-mono text-emerald-500">-0.2%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 w-[98%]"></div>
-                            </div>
+            <FeatureCard title="EU AI Act Compliance">
+                <div className="flex flex-col h-full justify-between">
+                    <div className="space-y-4">
+                        <div className="p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 text-center">
+                            <div className="text-3xl font-bold text-indigo-600 dark:text-indigo-400 mb-1">High Risk</div>
+                            <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider">System Classification</div>
                         </div>
-                    </div>
-                    <div className="flex items-start gap-4">
-                        <div className="flex-1">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Bias Detection (Gender)</span>
-                                <span className="text-xs font-mono text-amber-500">1.4%</span>
-                            </div>
-                            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                                <div className="h-full bg-amber-500 w-[12%]"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                        <h5 className="text-xs font-bold text-slate-400 uppercase mb-3">Recent Human Oversight Logs</h5>
                         <div className="space-y-2">
-                            {[
-                                { user: 'D. Steward', action: 'Overrode Agent Decision #4921', reason: 'Context Mismatch', time: '2h ago' },
-                                { user: 'Compliance Lead', action: 'Flagged Dataset V4', reason: 'PII Detected', time: '5h ago' }
-                            ].map((log, i) => (
-                                <div key={i} className="flex justify-between text-xs p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800">
-                                    <div className="flex items-center gap-2">
-                                        <User size={12} className="text-slate-400" />
-                                        <span className="font-medium text-slate-900 dark:text-white">{log.action}</span>
+                            {mockComplianceDocs.map(doc => (
+                                <div key={doc.id} className="flex items-center justify-between p-2 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                    <div className="flex items-center gap-2 overflow-hidden">
+                                        <FileText size={14} className="text-slate-400 shrink-0"/>
+                                        <span className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{doc.name}</span>
                                     </div>
-                                    <span className="text-slate-400">{log.time}</span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${
+                                        doc.status === 'Ready' ? 'bg-emerald-100 text-emerald-600' :
+                                        doc.status === 'Pending' ? 'bg-slate-100 text-slate-500' :
+                                        'bg-amber-100 text-amber-600'
+                                    }`}>{doc.status}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
-                </div>
-            </FeatureCard>
-
-            {/* Governance Framework */}
-            <FeatureCard title="Policy & ISO Framework">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
-                        <div className="flex items-center gap-2 mb-2">
-                            <BookOpen size={16} className="text-indigo-500" />
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">ISO 42001</span>
-                        </div>
-                        <p className="text-xs text-slate-500 mb-3">AI Management System framework alignment.</p>
-                        <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-indigo-500 w-[65%]"></div>
-                        </div>
-                        <div className="text-right text-[10px] font-bold text-indigo-500 mt-1">65% Aligned</div>
-                    </div>
-                    
-                    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Shield size={16} className="text-emerald-500" />
-                            <span className="text-sm font-bold text-slate-900 dark:text-white">GDPR Mapping</span>
-                        </div>
-                        <p className="text-xs text-slate-500 mb-3">Data privacy cross-mapping status.</p>
-                        <div className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                            <div className="h-full bg-emerald-500 w-[92%]"></div>
-                        </div>
-                        <div className="text-right text-[10px] font-bold text-emerald-500 mt-1">92% Compliant</div>
-                    </div>
-                </div>
-                
-                <div className="mt-4 p-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900">
-                    <div className="flex justify-between items-center">
-                        <div>
-                            <h5 className="font-bold text-sm">AI Literacy Training</h5>
-                            <p className="text-xs opacity-70">Mandatory for all staff interacting with AI.</p>
-                        </div>
-                        <button className="px-3 py-1.5 bg-white/10 dark:bg-slate-900/10 rounded-lg text-xs font-bold backdrop-blur-sm">View Modules</button>
-                    </div>
+                    <button 
+                        onClick={() => setShowComplianceModal(true)}
+                        className="w-full mt-4 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-sm shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                    >
+                        <ShieldCheck size={16}/> Generate Audit Pack
+                    </button>
                 </div>
             </FeatureCard>
         </div>
-    </div>
+      </div>
   );
 
   const renderReliabilityTab = () => (
-      <div className="animate-fade-in grid grid-cols-1 md:grid-cols-3 gap-6 h-full">
-          <FeatureCard title="System Latency (P99)" className="md:col-span-2">
-              <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={mockLatencyData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                      <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={{ borderRadius: '12px' }} />
-                      <Line type="monotone" dataKey="latency" stroke="#f59e0b" strokeWidth={3} dot={{r: 4, fill: '#f59e0b'}} activeDot={{r: 6}} />
-                  </LineChart>
-              </ResponsiveContainer>
-          </FeatureCard>
+      <div className="animate-fade-in space-y-6 h-full pb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <FeatureCard title="System Health" className="md:col-span-3">
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                     <div className="p-4 bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800 rounded-xl">
+                         <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase mb-2">Uptime (30d)</div>
+                         <div className="text-3xl font-bold text-slate-900 dark:text-white">99.99%</div>
+                     </div>
+                     <div className="p-4 bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 rounded-xl">
+                         <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase mb-2">Avg Latency</div>
+                         <div className="text-3xl font-bold text-slate-900 dark:text-white">42ms</div>
+                     </div>
+                     <div className="p-4 bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800 rounded-xl">
+                         <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase mb-2">API Usage</div>
+                         <div className="text-3xl font-bold text-slate-900 dark:text-white">85%</div>
+                     </div>
+                     <div className="p-4 bg-indigo-50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-800 rounded-xl">
+                         <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase mb-2">Active Pods</div>
+                         <div className="text-3xl font-bold text-slate-900 dark:text-white">12/20</div>
+                     </div>
+                 </div>
 
-          <FeatureCard title="Reliability Log" className="md:col-span-1">
-              <div className="space-y-4">
-                  {mockReliabilityEvents.map(event => (
-                      <div key={event.id} className="p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                          <div className="flex items-center gap-2 mb-1">
-                             <div className={`h-2 w-2 rounded-full ${
-                                 event.type === 'success' ? 'bg-emerald-500' :
-                                 event.type === 'warning' ? 'bg-amber-500' : 'bg-blue-500'
-                             }`}></div>
-                             <span className="text-xs font-bold text-slate-900 dark:text-white">{event.title}</span>
-                             <span className="ml-auto text-[10px] text-slate-400">{event.time}</span>
-                          </div>
-                          <p className="text-xs text-slate-500 leading-relaxed">{event.desc}</p>
-                      </div>
-                  ))}
-              </div>
-          </FeatureCard>
+                 <div className="space-y-4">
+                     <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Incident Log</h4>
+                     {mockReliabilityEvents.map(event => (
+                         <div key={event.id} className="flex gap-4 p-4 border-l-4 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm rounded-r-xl">
+                             <div className={`mt-1 p-1 rounded-full ${
+                                 event.type === 'success' ? 'text-emerald-500 bg-emerald-50' :
+                                 event.type === 'warning' ? 'text-amber-500 bg-amber-50' :
+                                 'text-blue-500 bg-blue-50'
+                             }`}>
+                                 {event.type === 'success' ? <CheckCircle2 size={16}/> : event.type === 'warning' ? <AlertTriangle size={16}/> : <Activity size={16}/>}
+                             </div>
+                             <div className="flex-1">
+                                 <div className="flex justify-between items-start">
+                                     <h5 className="font-bold text-sm text-slate-900 dark:text-white">{event.title}</h5>
+                                     <span className="text-xs text-slate-400">{event.time}</span>
+                                 </div>
+                                 <p className="text-xs text-slate-500 mt-1">{event.desc}</p>
+                             </div>
+                         </div>
+                     ))}
+                 </div>
+            </FeatureCard>
+
+            <FeatureCard title="Latency Monitor" className="md:col-span-3">
+                 <ResponsiveContainer width="100%" height={250}>
+                     <AreaChart data={mockLatencyData}>
+                        <defs>
+                            <linearGradient id="colorLat" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                            </linearGradient>
+                        </defs>
+                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                         <XAxis dataKey="time" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                         <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
+                         <Tooltip contentStyle={{ borderRadius: '12px' }} />
+                         <Area type="monotone" dataKey="latency" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorLat)" />
+                     </AreaChart>
+                 </ResponsiveContainer>
+            </FeatureCard>
+        </div>
       </div>
   );
 
   const renderAIConsoleTab = () => (
-      <div className="animate-fade-in flex flex-col h-full bg-slate-50 dark:bg-slate-850 rounded-[2rem] overflow-hidden border border-slate-200 dark:border-slate-800">
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              {chatMessages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[80%] p-4 rounded-2xl ${
-                          msg.role === 'user' 
-                          ? 'bg-datova-500 text-white rounded-br-sm' 
-                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-bl-sm shadow-sm border border-slate-100 dark:border-slate-700'
-                      }`}>
-                          {msg.role === 'ai' && (
-                              <div className="flex items-center gap-2 mb-2 text-datova-500 dark:text-datova-400 text-xs font-bold uppercase tracking-wider">
-                                  <Sparkles size={12} /> Datova Intelligence
-                              </div>
-                          )}
-                          <p className="text-sm leading-relaxed whitespace-pre-line">{msg.text}</p>
-                      </div>
-                  </div>
-              ))}
-              {isChatTyping && (
-                  <div className="flex justify-start">
-                      <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl rounded-bl-sm shadow-sm border border-slate-100 dark:border-slate-700 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-75"></div>
-                          <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-150"></div>
-                      </div>
-                  </div>
-              )}
-              <div ref={chatEndRef} />
-          </div>
-          
-          <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-              <form onSubmit={handleChatSubmit} className="relative">
-                  <input 
-                    type="text" 
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Ask about your data, anomalies, or agent performance..." 
-                    className="w-full pl-6 pr-14 py-4 bg-slate-100 dark:bg-slate-950 rounded-2xl border-none focus:ring-2 focus:ring-datova-500 outline-none dark:text-white placeholder-slate-400"
-                  />
-                  <button 
-                    type="submit" 
-                    disabled={!chatInput.trim() || isChatTyping}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-datova-500 text-white rounded-xl hover:bg-datova-600 disabled:opacity-50 disabled:hover:bg-datova-500 transition-all"
-                  >
-                      <Send size={18} />
-                  </button>
-              </form>
-          </div>
+      <div className="animate-fade-in h-full flex flex-col pb-6">
+        <div className="flex-1 bg-white dark:bg-slate-900 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl overflow-hidden flex flex-col relative">
+             <div className="absolute top-0 w-full p-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-slate-100 dark:border-slate-800 z-10 flex justify-between items-center">
+                 <div className="flex items-center gap-3">
+                     <div className="w-10 h-10 bg-datova-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-datova-500/30">
+                         <Sparkles size={20} />
+                     </div>
+                     <div>
+                         <h3 className="font-bold text-slate-900 dark:text-white">Datova Intelligence</h3>
+                         <div className="flex items-center gap-2">
+                             <span className="flex h-2 w-2 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                             </span>
+                             <span className="text-xs text-slate-500">Connected to Layer 2 (Semantic)</span>
+                         </div>
+                     </div>
+                 </div>
+                 <div className="flex gap-2">
+                     <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><Settings size={18}/></button>
+                     <button className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><History size={18}/></button>
+                 </div>
+             </div>
+
+             <div className="flex-1 overflow-y-auto p-6 pt-24 space-y-6">
+                 {chatMessages.map((msg, i) => (
+                     <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                         <div className={`max-w-xl p-4 rounded-2xl text-sm leading-relaxed ${
+                             msg.role === 'user' 
+                             ? 'bg-datova-500 text-white rounded-br-none shadow-lg shadow-datova-500/20' 
+                             : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-none'
+                         }`}>
+                             {msg.role === 'ai' && <div className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Analysis</div>}
+                             {msg.text}
+                         </div>
+                     </div>
+                 ))}
+                 {isChatTyping && (
+                     <div className="flex justify-start">
+                         <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-2xl rounded-bl-none flex gap-1">
+                             <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></span>
+                             <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100"></span>
+                             <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200"></span>
+                         </div>
+                     </div>
+                 )}
+                 <div ref={chatEndRef}></div>
+             </div>
+
+             <div className="p-4 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800">
+                 <form onSubmit={handleChatSubmit} className="relative max-w-4xl mx-auto">
+                     <input 
+                        type="text" 
+                        placeholder="Ask about your data (e.g., 'Analyze the revenue trend from last week' or 'Why did the order error rate spike?')"
+                        className="w-full pl-6 pr-14 py-4 rounded-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-datova-500 dark:text-white shadow-sm"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                     />
+                     <button 
+                        type="submit"
+                        disabled={!chatInput.trim() || isChatTyping}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-2 bg-datova-500 text-white rounded-full hover:bg-datova-600 disabled:opacity-50 disabled:hover:bg-datova-500 transition-colors shadow-md"
+                     >
+                         <ArrowRight size={20} />
+                     </button>
+                 </form>
+                 <div className="text-center mt-2 text-[10px] text-slate-400">
+                     Datova AI can make mistakes. Consider checking important information.
+                 </div>
+             </div>
+        </div>
       </div>
   );
 
