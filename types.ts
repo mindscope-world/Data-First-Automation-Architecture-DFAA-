@@ -34,7 +34,7 @@ export interface ServicePhase {
   color: string;
 }
 
-export type DashboardTab = 'overview' | 'foundation' | 'intelligence' | 'automation' | 'reliability' | 'ai_console';
+export type DashboardTab = 'overview' | 'foundation' | 'intelligence' | 'automation' | 'governance' | 'value' | 'reliability' | 'security' | 'developer' | 'ai_console';
 
 export interface UserData {
   name: string;
